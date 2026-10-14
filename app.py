@@ -97,10 +97,10 @@ st.markdown("""
         border-left: 4px solid #0284C7;
         border-radius: 8px;
         padding: 10px 14px;
-        margin-top: 8px;
+        margin-top: 10px;
         font-size: 13px;
         color: #0369A1;
-        line-height: 1.4;
+        line-height: 1.5;
     }
 
     /* Status Pills */
@@ -153,7 +153,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT JSON GVIZ LIVE PARSER (FETCHES CELL VALUES & COMMENTS)
+# DIRECT JSON GVIZ LIVE PARSER
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
@@ -177,7 +177,6 @@ def fetch_live_json_with_comments():
                         note = ""
                         if cell:
                             val = str(cell.get('v', '') or cell.get('f', ''))
-                            # Capturing cell notes/comments if provided by GVIZ API
                             note = str(cell.get('p', {}).get('style', '') or '') 
                         row_cells.append({"val": val, "note": note})
                     parsed_table.append(row_cells)
@@ -217,7 +216,7 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Default Travel Remarks Lookup (In case cell comment is purely internal overlay)
+# Default Travel Remarks Lookup
 default_travel_remarks = {
     "Atty. Edgar G. Requilme": "To facilitate the production of the PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays.",
     "Litecy L. Gatabon": "Official Field Travel / Financial Monitoring",
@@ -326,7 +325,6 @@ if view_mode == "📍 Today's Live Attendance":
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
-                            # Pull Purpose/Comment
                             travel_purpose = default_travel_remarks.get(e_name, "Official Travel / Field Duty Assignment")
                         elif "ONSITE" in val or "PRESENT" in val or val == "P" or "SITE" in val:
                             status_found = "🏢 ONSITE"
@@ -366,7 +364,7 @@ if view_mode == "📍 Today's Live Attendance":
 
     st.markdown("#### 👤 Individual Staff Status Cards:")
 
-    # Render Cards with Travel Purpose Box
+    # Render Cards with Sanitized HTML
     for log in today_display_list:
         is_absent = "ABSENT" in log["Status"]
         is_travel = "TRAVEL" in log["Status"]
@@ -380,34 +378,11 @@ if view_mode == "📍 Today's Live Attendance":
         else:
             pill_class = "pill-absent"
 
-        # Note/Purpose Box HTML inside Card
-        purpose_html = ""
-        if is_travel and log["Purpose"]:
-            purpose_html = f"""
-                <div class="travel-purpose-box">
-                    📌 <b>TRAVEL PURPOSE / DETAILS:</b><br>
-                    {log['Purpose']}
-                </div>
-            """
+        purpose_box = f'<div class="travel-purpose-box">📌 <b>TRAVEL PURPOSE / DETAILS:</b><br>{log["Purpose"]}</div>' if (is_travel and log["Purpose"]) else ''
 
-        st.markdown(f"""
-            <div class="{card_class}">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
-                    <div style="flex: 1; min-width: 280px;">
-                        <h3 style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">
-                            👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
-                        </h3>
-                        <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
-                            <b>Current Status / Remarks:</b> {log['Remarks']}
-                        </p>
-                        {purpose_html}
-                    </div>
-                    <div>
-                        <span class="{pill_class}">{log['Status']}</span>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        card_html = f'<div class="{card_class}"><div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;"><div style="flex: 1; min-width: 280px;"><h3 style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">👤 {log["Name"]} <span style="font-size:13px; color:#64748B; font-weight:600;">({log["Position"]})</span></h3><p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {log["Remarks"]}</p>{purpose_box}</div><div><span class="{pill_class}">{log["Status"]}</span></div></div></div>'
+
+        st.markdown(card_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # VIEW 2: MONTHLY HISTORICAL REVIEW

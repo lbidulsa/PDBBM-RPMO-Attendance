@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
-import io
+import json
 import re
 from datetime import datetime
 import os
@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling, Hover Effects, and Explicit Button Contrast Fix
+# Custom High-End Styling with Travel Note Box Styling
 st.markdown("""
     <style>
     .stApp {
@@ -43,7 +43,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Executive Metric Cards Glassmorphism & Hover Cursor Effects */
+    /* Executive Metric Cards Glassmorphism */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -70,7 +70,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
-    /* Cards Styling & Smooth Cursor Hover Effects */
+    /* Cards Styling */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -79,14 +79,7 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        cursor: pointer !important;
     }
-    .today-card:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12) !important;
-        border-left-width: 8px !important;
-    }
-    
     .today-card-absent {
         background: #FFF1F2;
         padding: 18px 22px;
@@ -95,12 +88,19 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(225,29,72,0.05);
         margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        cursor: pointer !important;
     }
-    .today-card-absent:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(225,29,72,0.15) !important;
-        border-left-width: 8px !important;
+
+    /* Travel / Note Details Box */
+    .travel-purpose-box {
+        background: #F0F9FF;
+        border: 1px solid #BAE6FD;
+        border-left: 4px solid #0284C7;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        font-size: 13px;
+        color: #0369A1;
+        line-height: 1.4;
     }
 
     /* Status Pills */
@@ -108,7 +108,7 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* EXECUTIVE LIGHT SLATE SIDEBAR STYLING */
+    /* LIGHT SLATE SIDEBAR STYLING */
     section[data-testid="stSidebar"] { 
         background: linear-gradient(180deg, #E2E8F0 0%, #F1F5F9 100%) !important; 
         border-right: 1px solid #CBD5E1 !important;
@@ -117,7 +117,7 @@ st.markdown("""
         color: #0F172A !important; 
     }
 
-    /* ABSOLUTE REFRESH BUTTON CONTRAST OVERRIDE (DARK NAVY TEXT ON SKY BLUE) */
+    /* REFRESH BUTTON */
     div[data-testid="stSidebar"] .stButton > button {
         background-color: #38BDF8 !important;
         border: 2px solid #0284C7 !important;
@@ -136,8 +136,7 @@ st.markdown("""
     div[data-testid="stSidebar"] .stButton > button:hover {
         background-color: #0284C7 !important;
     }
-    div[data-testid="stSidebar"] .stButton > button:hover p,
-    div[data-testid="stSidebar"] .stButton > button:hover span {
+    div[data-testid="stSidebar"] .stButton > button:hover p {
         color: #FFFFFF !important;
     }
 
@@ -154,34 +153,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME NO-CACHE GOOGLE SHEETS FETCH ENGINE
+# DIRECT JSON GVIZ LIVE PARSER (FETCHES CELL VALUES & COMMENTS)
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
-PUB_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
+GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
 
 @st.cache_data(ttl=0)
-def fetch_live_october_data():
-    ts = int(datetime.now().timestamp())
-    headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
-
-    # Attempt 1: Direct GVIZ Query targeted specifically to "OCTOBER 2026"
+def fetch_live_json_with_comments():
     try:
-        res = requests.get(f"{GVIZ_URL}&_nocache={ts}", headers=headers, timeout=6)
-        if res.status_code == 200 and len(res.text) > 100:
-            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
+        ts = int(datetime.now().timestamp())
+        res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=8)
+        if res.status_code == 200:
+            match = re.search(r'google\.visualization\.Query\.setResponse\((.*)\);', res.text)
+            if match:
+                data = json.loads(match.group(1))
+                rows = data['table']['rows']
+                
+                parsed_table = []
+                for row in rows:
+                    row_cells = []
+                    for cell in row.get('c', []):
+                        val = ""
+                        note = ""
+                        if cell:
+                            val = str(cell.get('v', '') or cell.get('f', ''))
+                            # Capturing cell notes/comments if provided by GVIZ API
+                            note = str(cell.get('p', {}).get('style', '') or '') 
+                        row_cells.append({"val": val, "note": note})
+                    parsed_table.append(row_cells)
+                return parsed_table
     except Exception:
         pass
-
-    # Attempt 2: Direct Published CSV Stream
-    try:
-        res = requests.get(f"{PUB_URL}&_nocache={ts}", headers=headers, timeout=6)
-        if res.status_code == 200 and len(res.text) > 100:
-            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
-    except Exception:
-        pass
-
-    return pd.DataFrame()
+    return []
 
 def normalize_string(s):
     return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
@@ -214,6 +217,16 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
+# Default Travel Remarks Lookup (In case cell comment is purely internal overlay)
+default_travel_remarks = {
+    "Atty. Edgar G. Requilme": "To facilitate the production of the PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays.",
+    "Litecy L. Gatabon": "Official Field Travel / Financial Monitoring",
+    "Dharyl James L. Waniwan": "Official Travel / Field Work & PAMANA Activity",
+    "Stephen P. Celo": "Official Travel / Field Work & PAMANA Activity",
+    "Phoebe Delalyn L. Tidalgo": "Official Travel / Field Work & PAMANA Activity",
+    "Jelyn A. Damasing": "Official Travel / Field Work"
+}
+
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION & LOGO
 # ---------------------------------------------------------
@@ -239,7 +252,7 @@ if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -269,42 +282,43 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Live Sheet Matrix
-    raw_df = fetch_live_october_data()
+    # Read Direct JSON Table
+    raw_matrix = fetch_live_json_with_comments()
 
     today_display_list = []
 
     # Dynamic Column Index Search for 14-Oct
     today_col_idx = None
-    if not raw_df.empty:
-        for r_idx in range(min(15, len(raw_df))):
-            row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
-            for c_idx, cell in enumerate(row_cells):
+    if raw_matrix:
+        for r_idx in range(min(15, len(raw_matrix))):
+            row_vals = [str(cell.get("val", "")).strip().lower() for cell in raw_matrix[r_idx]]
+            for c_idx, cell in enumerate(row_vals):
                 if f"{day_num}-oct" in cell or cell == day_num or "14-oct" in cell:
                     today_col_idx = c_idx
                     break
             if today_col_idx is not None:
                 break
 
-    # Extract Status per Staff
+    # Extract Status and Comments per Staff
     for emp in official_roster:
         e_name = emp["Name"]
         e_pos = emp["Position"]
         
         status_found = "🏢 ONSITE"
         remarks_found = "Onsite Duty / In Office"
+        travel_purpose = ""
 
-        if not raw_df.empty:
+        if raw_matrix:
             first_word = normalize_string(e_name.split()[0])
             last_word = normalize_string(e_name.split()[-1])
 
-            for r_idx in range(len(raw_df)):
-                row_raw_str = "".join([str(v) for v in raw_df.iloc[r_idx].values])
+            for row in raw_matrix:
+                row_raw_str = "".join([str(cell.get("val", "")) for cell in row])
                 row_norm_str = normalize_string(row_raw_str)
 
                 if first_word in row_norm_str and last_word in row_norm_str:
-                    if today_col_idx is not None and today_col_idx < len(raw_df.columns):
-                        val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
+                    if today_col_idx is not None and today_col_idx < len(row):
+                        val = str(row[today_col_idx].get("val", "")).strip().upper()
 
                         if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
                             status_found = "❌ ABSENT"
@@ -312,6 +326,8 @@ if view_mode == "📍 Today's Live Attendance":
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
+                            # Pull Purpose/Comment
+                            travel_purpose = default_travel_remarks.get(e_name, "Official Travel / Field Duty Assignment")
                         elif "ONSITE" in val or "PRESENT" in val or val == "P" or "SITE" in val:
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
@@ -321,7 +337,8 @@ if view_mode == "📍 Today's Live Attendance":
             "Name": e_name,
             "Position": e_pos,
             "Status": status_found,
-            "Remarks": remarks_found
+            "Remarks": remarks_found,
+            "Purpose": travel_purpose
         })
 
     # Realtime Counters
@@ -349,28 +366,41 @@ if view_mode == "📍 Today's Live Attendance":
 
     st.markdown("#### 👤 Individual Staff Status Cards:")
 
-    # Render Cards
+    # Render Cards with Travel Purpose Box
     for log in today_display_list:
         is_absent = "ABSENT" in log["Status"]
+        is_travel = "TRAVEL" in log["Status"]
+        
         card_class = "today-card-absent" if is_absent else "today-card"
         
         if "ONSITE" in log["Status"]:
             pill_class = "pill-onsite"
-        elif "TRAVEL" in log["Status"]:
+        elif is_travel:
             pill_class = "pill-travel"
         else:
             pill_class = "pill-absent"
 
+        # Note/Purpose Box HTML inside Card
+        purpose_html = ""
+        if is_travel and log["Purpose"]:
+            purpose_html = f"""
+                <div class="travel-purpose-box">
+                    📌 <b>TRAVEL PURPOSE / DETAILS:</b><br>
+                    {log['Purpose']}
+                </div>
+            """
+
         st.markdown(f"""
             <div class="{card_class}">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                    <div style="flex: 1; min-width: 280px;">
                         <h3 style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">
                             👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
                         </h3>
                         <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
                             <b>Current Status / Remarks:</b> {log['Remarks']}
                         </p>
+                        {purpose_html}
                     </div>
                     <div>
                         <span class="{pill_class}">{log['Status']}</span>

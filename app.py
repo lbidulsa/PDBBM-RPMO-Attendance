@@ -150,20 +150,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME GOOGLE SHEETS LIVE PARSER (ZERO CACHE)
+# DIRECT DUAL-STREAM GOOGLE SHEETS LIVE CONNECTOR
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
+PUB_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
 @st.cache_data(ttl=0)
-def fetch_gsheet_matrix_direct():
+def fetch_robust_gsheet_matrix():
+    ts = int(datetime.now().timestamp())
+    
+    # Primary Attempt: GVIZ Query
     try:
-        ts = int(datetime.now().timestamp())
-        res = requests.get(f"{GVIZ_URL}&_nocache={ts}", timeout=8)
-        if res.status_code == 200 and len(res.text) > 50:
+        res = requests.get(f"{GVIZ_URL}&_cb={ts}", timeout=6)
+        if res.status_code == 200 and len(res.text) > 100:
             return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
+
+    # Secondary Backup Stream: Published CSV
+    try:
+        res = requests.get(f"{PUB_CSV_URL}&_cb={ts}", timeout=6)
+        if res.status_code == 200 and len(res.text) > 100:
+            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
+    except Exception:
+        pass
+
     return pd.DataFrame()
 
 def normalize_string(s):
@@ -222,7 +234,7 @@ if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -252,12 +264,12 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Fetch Realtime Google Sheet Matrix
-    raw_df = fetch_gsheet_matrix_direct()
+    # Fetch Realtime Google Sheet Data
+    raw_df = fetch_robust_gsheet_matrix()
 
     today_display_list = []
 
-    # Dynamic Header Scanner: Locate 14-Oct
+    # Dynamic Column Index Detector (Checking top 15 rows for '14-Oct' or '14')
     today_col_idx = None
     if not raw_df.empty:
         for r_idx in range(min(15, len(raw_df))):
@@ -269,11 +281,12 @@ if view_mode == "📍 Today's Live Attendance":
             if today_col_idx is not None:
                 break
 
-    # Parse Attendance Directly per Employee
+    # Parse Each Employee
     for emp in official_roster:
         e_name = emp["Name"]
         e_pos = emp["Position"]
         
+        # Default status if not matched
         status_found = "🏢 ONSITE"
         remarks_found = "Onsite Duty / In Office"
 
@@ -285,7 +298,7 @@ if view_mode == "📍 Today's Live Attendance":
                 row_raw_str = "".join([str(v) for v in raw_df.iloc[r_idx].values])
                 row_norm_str = normalize_string(row_raw_str)
 
-                # Token matching independent of spaces
+                # Token match
                 if first_word in row_norm_str and last_word in row_norm_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -308,13 +321,13 @@ if view_mode == "📍 Today's Live Attendance":
             "Remarks": remarks_found
         })
 
-    # Metric Counters
+    # Counters
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
-    # 4 Metric Cards
+    # 4 Executive Metric Cards
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")

@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-from datetime import datetime, date
-from supabase import create_client, Client
+from datetime import datetime
 import os
 
 # ---------------------------------------------------------
@@ -15,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End CSS Styling & Glassmorphism Effects
+# Custom Styling & Glassmorphism
 st.markdown("""
     <style>
     .stApp {
@@ -42,7 +40,6 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Metric Cards Glassmorphism */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -68,7 +65,6 @@ st.markdown("""
         font-size: 26px !important;
     }
 
-    /* Cards Styling */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -91,7 +87,6 @@ st.markdown("""
         margin-bottom: 12px;
     }
 
-    /* Status Pills */
     .pill-onsite { background-color: #DCFCE7; color: #15803D; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BBF7D0; font-size: 13px; }
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-wfh { background-color: #E0F2FE; color: #0369A1; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BAE6FD; font-size: 13px; }
@@ -125,11 +120,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# REAL-TIME DYNAMIC GOOGLE SHEETS CONNECTOR
+# GOOGLE SHEETS CONNECTOR (0-second TTL for instant live updates)
 # ---------------------------------------------------------
 GSHEETS_BASE_URL = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet="
 
-@st.cache_data(ttl=5) # Realtime update every 5 seconds
+@st.cache_data(ttl=0) # Direct Live Stream
 def fetch_live_gsheet_tab(sheet_name):
     try:
         url = f"{GSHEETS_BASE_URL}{sheet_name.replace(' ', '%20')}"
@@ -138,65 +133,11 @@ def fetch_live_gsheet_tab(sheet_name):
     except Exception:
         return pd.DataFrame()
 
-# SUPABASE CONNECTION
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://YOUR_SUPABASE_PROJECT_ID.supabase.co")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "YOUR_SUPABASE_ANON_KEY")
-
-@st.cache_resource
-def init_supabase():
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
-
-try:
-    supabase: Client = init_supabase()
-except Exception:
-    supabase = None
-
-def fetch_supabase_today_logs():
-    if supabase:
-        try:
-            res = supabase.table("rpmo_attendance").select("*").eq("attendance_date", str(date.today())).execute()
-            if res.data:
-                return pd.DataFrame(res.data)
-        except Exception:
-            pass
-    return pd.DataFrame()
-
 # ---------------------------------------------------------
-# OFFICIAL 24 ROSTER LIST
-# ---------------------------------------------------------
-roster_list = [
-    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
-    {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
-    {"Name": "Sowad Repors Samporna", "Position": "SWO III"},
-    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III"},
-    {"Name": "Areej M. Balindong", "Position": "SWO III"},
-    {"Name": "Litecy L. Gatabon", "Position": "FA III"},
-    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III"},
-    {"Name": "Stephen P. Celo", "Position": "PDO III"},
-    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III"},
-    {"Name": "Louie B. Idulsa", "Position": "ITO I"},
-    {"Name": "Whilmar B. Porras", "Position": "TS II"},
-    {"Name": "Jelyn A. Damasing", "Position": "PDO II"},
-    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II"},
-    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II"},
-    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II"},
-    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II"},
-    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II"},
-    {"Name": "Hezam M. Dubar", "Position": "PDO II"},
-    {"Name": "April Joy Y. Saburnido", "Position": "PDO II"},
-    {"Name": "King Mark B. Ponce", "Position": "PDO III"},
-    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II"},
-    {"Name": "Edmund Plastina", "Position": "PDO II"},
-    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
-    {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
-]
-
-# ---------------------------------------------------------
-# SIDEBAR NAVIGATION & LOGO
+# SIDEBAR NAVIGATION WITH LOGO
 # ---------------------------------------------------------
 st.sidebar.markdown('<div class="sidebar-logo-card">', unsafe_allow_html=True)
 
-# Display logo.png if present in folder
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 
@@ -204,15 +145,18 @@ st.sidebar.markdown("<h3 style='margin-top:10px; margin-bottom:2px;'>📋 PDBBM-
 st.sidebar.markdown("<span style='color:#38BDF8; font-size:12px; font-weight:700;'>DSWD FIELD OFFICE X</span>", unsafe_allow_html=True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-st.sidebar.title("🎛️ Navigation Portal")
+st.sidebar.title("🎛️ Portal Views")
 
 view_mode = st.sidebar.radio(
-    "Select View Mode:",
-    ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review", "✍️ Staff Log Entry Form"]
+    "Select Portal View:",
+    ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"]
 )
 
+if st.sidebar.button("🔄 Force Refresh Data", use_container_width=True):
+    st.rerun()
+
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets & Supabase Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Directly Linked to Google Sheets")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -233,66 +177,74 @@ st.markdown('<div class="glow-header-title">📋 PDBBM-RPMO STAFF DAILY LOGS TRA
 st.markdown('<div class="glow-header-sub">DSWD Field Office X • Executive Decision Support Portal</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 1: TODAY'S LIVE ATTENDANCE LOGS
+# VIEW 1: TODAY'S LIVE ATTENDANCE (SMART DATE PARSER)
 # ---------------------------------------------------------
 if view_mode == "📍 Today's Live Attendance":
     now_dt = datetime.now()
     today_str = now_dt.strftime("%B %d, %Y")
-    today_day_col = str(now_dt.day) # e.g. "14"
+    day_num = str(now_dt.day) # e.g. "14"
+    
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Fetch Cloud Supabase Logs for Today
-    df_sp_today = fetch_supabase_today_logs()
-    
-    # Fetch Live Google Sheet for Current Month
-    df_gsheet_oct = fetch_live_gsheet_tab("OCTOBER 2026")
+    # Fetch Current Month Sheet
+    df_oct = fetch_live_gsheet_tab("OCTOBER 2026")
 
     today_display_list = []
 
-    for emp in roster_list:
-        e_name = emp["Name"]
-        e_pos = emp["Position"]
-        status_found = "🏢 ONSITE"
-        remarks_found = "In Office - Daily Operations"
+    if not df_oct.empty:
+        # Find column matching today's date (e.g. "14-Oct-Wed" or "14")
+        target_col = None
+        for col in df_oct.columns:
+            col_s = str(col).strip()
+            if col_s.startswith(f"{day_num}-") or col_s == day_num or f" {day_num} " in f" {col_s} ":
+                target_col = col
+                break
 
-        # 1. Priority: Check Supabase DB Logs
-        if not df_sp_today.empty and 'staff_name' in df_sp_today.columns:
-            matched_sp = df_sp_today[df_sp_today['staff_name'].str.lower() == e_name.lower()]
-            if not matched_sp.empty:
-                last_entry = matched_sp.iloc[-1]
-                status_found = last_entry.get('status', '🏢 ONSITE')
-                remarks_found = last_entry.get('activity_remarks', 'Logged On Duty')
+        # Fallback to last column if exact match not found
+        if not target_col and len(df_oct.columns) > 3:
+            target_col = df_oct.columns[3]
 
-        # 2. Priority: Check Google Sheet Today Column
-        elif not df_gsheet_oct.empty and today_day_col in df_gsheet_oct.columns and 'Name of Employee' in df_gsheet_oct.columns:
-            matched_gs = df_gsheet_oct[df_gsheet_oct['Name of Employee'].astype(str).str.lower().str.contains(e_name.lower().split()[0])]
-            if not matched_gs.empty:
-                val_gs = str(matched_gs.iloc[0][today_day_col]).strip().upper()
-                if val_gs in ["A", "ABSENT", "LEAVE", "SL", "VL"]:
-                    status_found = "❌ ABSENT"
-                    remarks_found = "Official Leave / Absent"
-                elif val_gs in ["T", "TRAVEL", "OB"]:
-                    status_found = "🚗 OFFICIAL TRAVEL"
-                    remarks_found = "Official Travel / Field Work"
-                elif val_gs in ["WFH", "REMOTE"]:
-                    status_found = "💻 WORK FROM HOME"
-                    remarks_found = "Work From Home"
+        emp_col_name = df_oct.columns[1] if len(df_oct.columns) > 1 else df_oct.columns[0]
+        pos_col_name = df_oct.columns[2] if len(df_oct.columns) > 2 else df_oct.columns[1]
 
-        today_display_list.append({
-            "Name": e_name,
-            "Position": e_pos,
-            "Status": status_found,
-            "Remarks": remarks_found
-        })
+        for _, row in df_oct.iterrows():
+            e_name = str(row[emp_col_name]).strip()
+            e_pos = str(row[pos_col_name]).strip()
 
-    # Realtime Counters
+            if e_name and e_name.lower() != "nan" and "name" not in e_name.lower():
+                status_found = "🏢 ONSITE"
+                remarks_found = "Onsite Duty / In Office"
+
+                if target_col and target_col in df_oct.columns:
+                    val = str(row[target_col]).strip().upper()
+
+                    if "ABSENT" in val or val == "A" or "LEAVE" in val:
+                        status_found = "❌ ABSENT"
+                        remarks_found = "Official Leave / Absent"
+                    elif "TRAVEL" in val or val == "T" or "OB" in val:
+                        status_found = "🚗 OFFICIAL TRAVEL"
+                        remarks_found = "Official Travel / Field Work"
+                    elif "WFH" in val:
+                        status_found = "💻 WORK FROM HOME"
+                        remarks_found = "Work From Home"
+                    elif "ONSITE" in val or "PRESENT" in val or val == "P":
+                        status_found = "🏢 ONSITE"
+                        remarks_found = "In Office - Onsite"
+
+                today_display_list.append({
+                    "Name": e_name,
+                    "Position": e_pos,
+                    "Status": status_found,
+                    "Remarks": remarks_found
+                })
+
+    # Metric Counters
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
     cnt_wfh = sum(1 for item in today_display_list if "WFH" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
-    # 5 Metric Cards
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")
@@ -302,17 +254,16 @@ if view_mode == "📍 Today's Live Attendance":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Highlight Absent Staff
+    # Highlight Absent Staff Alert Box
     absent_staff = [item for item in today_display_list if "ABSENT" in item["Status"]]
     if absent_staff:
-        st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY:**")
+        st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY (REALTIME GSHEET):**")
         for ab in absent_staff:
-            st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Remarks: {ab['Remarks']}*")
+            st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Status: {ab['Remarks']}*")
         st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("#### 👤 Individual Staff Status Cards:")
 
-    # Render Cards (No Time-In)
     for log in today_display_list:
         is_absent = "ABSENT" in log["Status"]
         card_class = "today-card-absent" if is_absent else "today-card"
@@ -334,7 +285,7 @@ if view_mode == "📍 Today's Live Attendance":
                             👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
                         </h3>
                         <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
-                            <b>Activity / Location:</b> {log['Remarks']}
+                            <b>Current Status / Remarks:</b> {log['Remarks']}
                         </p>
                     </div>
                     <div>
@@ -345,10 +296,10 @@ if view_mode == "📍 Today's Live Attendance":
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 2: MONTHLY HISTORICAL REVIEW (REALTIME GSHEETS)
+# VIEW 2: MONTHLY HISTORICAL REVIEW
 # ---------------------------------------------------------
-elif view_mode == "🗓️ Monthly Historical Review":
-    st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets)")
+else:
+    st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
     months_list = ["APRIL 2026", "MAY 2026", "JUNE 2026", "JULY 2026", "AUGUST 2026", "SEPTEMBER 2026", "OCTOBER 2026"]
     month_tabs = st.tabs(months_list)
@@ -356,8 +307,7 @@ elif view_mode == "🗓️ Monthly Historical Review":
     for idx, m_tab in enumerate(month_tabs):
         m_name = months_list[idx]
         with m_tab:
-            st.markdown(f"#### 📊 Realtime Google Sheet Data — **{m_name}**")
-            
+            st.markdown(f"#### 📊 Google Sheet Live Matrix — **{m_name}**")
             df_m_live = fetch_live_gsheet_tab(m_name)
             
             if not df_m_live.empty:
@@ -365,50 +315,12 @@ elif view_mode == "🗓️ Monthly Historical Review":
             else:
                 st.info(f"ℹ️ Loading live data for {m_name} from Google Sheets...")
 
-# ---------------------------------------------------------
-# VIEW 3: STAFF LOG ENTRY FORM
-# ---------------------------------------------------------
-else:
-    st.markdown("### ✍️ Daily Attendance Log Entry Form")
-    
-    with st.form("entry_form", clear_on_submit=True):
-        c_f1, c_f2 = st.columns(2)
-        
-        with c_f1:
-            staff_choice = st.selectbox("👤 Select Staff Name:", [s["Name"] + " (" + s["Position"] + ")" for s in roster_list])
-            work_arr = st.radio("📍 Work Arrangement Status:", ["🏢 ONSITE", "🚗 OFFICIAL TRAVEL", "💻 WORK FROM HOME", "❌ ABSENT"], horizontal=True)
-        
-        with c_f2:
-            remarks_val = st.text_area("📝 Activity / Location Remarks:", placeholder="E.g., On Official Leave / Travel to Bukidnon...")
-        
-        submit_log = st.form_submit_button("💾 Save & Realtime Sync Attendance Log", use_container_width=True)
-        
-        if submit_log:
-            staff_name_clean = staff_choice.split(" (")[0]
-            staff_pos_clean = staff_choice.split(" (")[1].replace(")", "") if "(" in staff_choice else "RPMO Staff"
-            
-            if supabase:
-                try:
-                    payload = {
-                        "attendance_date": str(date.today()),
-                        "staff_name": staff_name_clean,
-                        "position": staff_pos_clean,
-                        "work_arrangement": work_arr,
-                        "activity_remarks": remarks_val if remarks_val else "Logged On Duty",
-                        "status": work_arr
-                    }
-                    supabase.table("rpmo_attendance").insert(payload).execute()
-                    st.success(f"✅ Realtime Attendance Log successfully saved for {staff_name_clean}!")
-                    st.rerun()
-                except Exception as ex:
-                    st.error(f"⚠️ Error saving log: {ex}")
-
 # FOOTER BADGE
 st.markdown("---")
 st.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #64748B; padding-bottom: 20px;">
-        ⚙️ <b>PDBBM Executive Multi-Program Decision Support Portal</b> | Realtime Sync Engine<br>
+        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Realtime Sync Engine<br>
         Designed & Developed by <b>LOUIE B. IDULSA - PDBBM ITO I</b> • DSWD Field Office X
     </div>
     """, 

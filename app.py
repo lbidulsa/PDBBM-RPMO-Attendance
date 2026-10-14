@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling & Explicit Button Color Overrides
+# Custom High-End Styling & Explicit Button Overrides
 st.markdown("""
     <style>
     .stApp {
@@ -87,23 +87,27 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* FIX SIDEBAR BUTTON CONTRAST & VISIBILITY */
-    div[data-testid="stSidebar"] button {
-        background: linear-gradient(90deg, #0284C7, #0369A1) !important;
+    /* ABSOLUTE FIX FOR REFRESH BUTTON */
+    div[data-testid="stSidebar"] div.stButton > button {
+        background-color: #0284C7 !important;
         color: #FFFFFF !important;
-        border: 1px solid #38BDF8 !important;
+        font-weight: 900 !important;
+        border: 2px solid #38BDF8 !important;
         border-radius: 10px !important;
-        padding: 12px !important;
+        padding: 10px 16px !important;
         width: 100% !important;
+        display: block !important;
     }
-    div[data-testid="stSidebar"] button * {
+    div[data-testid="stSidebar"] div.stButton > button p,
+    div[data-testid="stSidebar"] div.stButton > button span,
+    div[data-testid="stSidebar"] div.stButton > button div {
         color: #FFFFFF !important;
         font-weight: 900 !important;
         font-size: 15px !important;
     }
-    div[data-testid="stSidebar"] button:hover {
-        background: #0284C7 !important;
-        border-color: #38BDF8 !important;
+    div[data-testid="stSidebar"] div.stButton > button:hover {
+        background-color: #0369A1 !important;
+        border-color: #0284C7 !important;
     }
 
     .sidebar-logo-card {
@@ -130,7 +134,7 @@ def load_published_live_sheet():
     except Exception:
         return pd.DataFrame()
 
-# Official 24 Staff Members
+# Official 24 Staff Members List
 official_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
@@ -182,7 +186,7 @@ if st.sidebar.button("🔄 Refresh Data Now", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Connected")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -218,18 +222,18 @@ if view_mode == "📍 Today's Live Attendance":
     today_display_list = []
 
     if not raw_df.empty:
-        # Step 1: Find the exact column for today (e.g., '14-Oct-Wed' or '14')
+        # Step 1: Detect column index for 14-Oct
         today_col_idx = None
         for r in range(min(10, len(raw_df))):
             for c in range(len(raw_df.columns)):
                 cell_val = str(raw_df.iloc[r, c]).strip().lower()
-                if f"{day_num}-oct" in cell_val or cell_val == day_num or cell_val.startswith(f"{day_num}-"):
+                if f"{day_num}-oct" in cell_val or cell_val == day_num:
                     today_col_idx = c
                     break
             if today_col_idx is not None:
                 break
 
-        # Step 2: Iterate over roster and match status from Google Sheet
+        # Step 2: Extract status for all 24 staff members
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]

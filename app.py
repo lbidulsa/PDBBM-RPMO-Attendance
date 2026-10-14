@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End CSS Styling & Dark Sidebar Button Fix
+# Custom High-End CSS Styling & Dark Sidebar Button Text Fix
 st.markdown("""
     <style>
     .stApp {
@@ -40,7 +40,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Metric Cards Glassmorphism */
+    /* Executive Metric Cards Glassmorphism */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -92,25 +92,29 @@ st.markdown("""
     /* Status Pills */
     .pill-onsite { background-color: #DCFCE7; color: #15803D; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BBF7D0; font-size: 13px; }
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
-    .pill-wfh { background-color: #E0F2FE; color: #0369A1; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BAE6FD; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* Dark Executive Sidebar Styling & Fixed Button Contrast */
+    /* Dark Executive Sidebar Styling & High Contrast Button */
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
     
+    /* Sidebar Button Contrast Fix */
     div[data-testid="stSidebar"] button {
         background-color: #0284C7 !important;
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        border: none !important;
+        border: 1px solid #38BDF8 !important;
         border-radius: 10px !important;
-        padding: 12px !important;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+        padding: 10px 16px !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+    }
+    div[data-testid="stSidebar"] button p {
+        color: #FFFFFF !important;
+        font-weight: 900 !important;
+        font-size: 15px !important;
+        letter-spacing: 0.3px;
     }
     div[data-testid="stSidebar"] button:hover {
         background-color: #0369A1 !important;
-        color: #FFFFFF !important;
+        border-color: #0284C7 !important;
     }
 
     .sidebar-logo-card {
@@ -127,10 +131,9 @@ st.markdown("""
 # ---------------------------------------------------------
 # DIRECT REALTIME PUBLISHED GOOGLE SHEETS CONNECTOR
 # ---------------------------------------------------------
-# Web Published Link Provided by User
 PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
-@st.cache_data(ttl=0) # TTL=0 Instant Realtime Fetch with Zero Delay!
+@st.cache_data(ttl=0) # Instant Realtime Fetch
 def load_published_live_sheet():
     try:
         df = pd.read_csv(PUBLISHED_CSV_URL, header=None)
@@ -138,9 +141,7 @@ def load_published_live_sheet():
     except Exception:
         return pd.DataFrame()
 
-# ---------------------------------------------------------
-# OFFICIAL PDBBM-RPMO STAFF ROSTER (24 MEMBERS)
-# ---------------------------------------------------------
+# Official 24 PDBBM-RPMO Roster
 default_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
@@ -228,7 +229,7 @@ if view_mode == "📍 Today's Live Attendance":
     today_display_list = []
 
     if not raw_df.empty:
-        # Detect today's date column (e.g. searching for "14-Oct-Wed" or "14")
+        # Detect today's date column (e.g. matching "14-Oct-Wed" or "14")
         today_col_idx = None
         for r in range(min(6, len(raw_df))):
             for c in range(len(raw_df.columns)):
@@ -239,7 +240,7 @@ if view_mode == "📍 Today's Live Attendance":
             if today_col_idx is not None:
                 break
 
-        # Extract Staff Members Data
+        # Scan Staff Rows
         for r in range(len(raw_df)):
             row_vals = [str(x).strip() for x in raw_df.iloc[r].values]
             row_str_combined = " ".join(row_vals).lower()
@@ -263,10 +264,7 @@ if view_mode == "📍 Today's Live Attendance":
                             remarks_found = "Official Leave / Absent"
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
-                            remarks_found = "Official Travel / Field Monitoring"
-                        elif "WFH" in val or "REMOTE" in val:
-                            status_found = "💻 WORK FROM HOME"
-                            remarks_found = "Work From Home"
+                            remarks_found = "Official Travel / Field Work"
                         elif "ONSITE" in val or "PRESENT" in val or val == "P":
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
@@ -279,7 +277,7 @@ if view_mode == "📍 Today's Live Attendance":
                             "Remarks": remarks_found
                         })
 
-    # Fill fallback if any missing
+    # Fallback to complete roster if missing
     parsed_names = [d["Name"] for d in today_display_list]
     for emp in default_roster:
         if emp["Name"] not in parsed_names:
@@ -290,24 +288,22 @@ if view_mode == "📍 Today's Live Attendance":
                 "Remarks": "Onsite Duty / In Office"
             })
 
-    # Realtime Metric Counts
+    # Realtime Metric Counts (4 Metric Cards Only)
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
-    cnt_wfh = sum(1 for item in today_display_list if "WFH" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
-    # 5 Executive Metric Cards
-    m1, m2, m3, m4, m5 = st.columns(5)
+    # 4 Executive Metric Cards
+    m1, m2, m3, m4 = st.columns(4)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")
     m3.metric("🚗 OFFICIAL TRAVEL", f"{cnt_travel} Staff")
-    m4.metric("💻 WFH / REMOTE", f"{cnt_wfh} Staff")
-    m5.metric("❌ ABSENT TODAY", f"{cnt_absent} Staff", delta=f"{cnt_absent} Absent" if cnt_absent > 0 else "All Present", delta_color="inverse" if cnt_absent > 0 else "normal")
+    m4.metric("❌ ABSENT TODAY", f"{cnt_absent} Staff", delta=f"{cnt_absent} Absent" if cnt_absent > 0 else "All Present", delta_color="inverse" if cnt_absent > 0 else "normal")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Highlight Absent Staff Red Alert Box
+    # Highlight Absent Staff Alert Box
     absent_staff = [item for item in today_display_list if "ABSENT" in item["Status"]]
     if absent_staff:
         st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY (REALTIME GSHEET):**")
@@ -326,8 +322,6 @@ if view_mode == "📍 Today's Live Attendance":
             pill_class = "pill-onsite"
         elif "TRAVEL" in log["Status"]:
             pill_class = "pill-travel"
-        elif "WFH" in log["Status"]:
-            pill_class = "pill-wfh"
         else:
             pill_class = "pill-absent"
 
@@ -339,7 +333,7 @@ if view_mode == "📍 Today's Live Attendance":
                             👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
                         </h3>
                         <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
-                            <b>Current Activity / Status:</b> {log['Remarks']}
+                            <b>Current Status / Remarks:</b> {log['Remarks']}
                         </p>
                     </div>
                     <div>
@@ -350,15 +344,14 @@ if view_mode == "📍 Today's Live Attendance":
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 2: MONTHLY HISTORICAL REVIEW (REALTIME MATRIX VIEWER)
+# VIEW 2: MONTHLY HISTORICAL REVIEW (LIVE MATRIX VIEWER)
 # ---------------------------------------------------------
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
-    # Embedded HTML iFrame to render the live interactive published Google Sheet
     gsheet_iframe_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&amp;headers=false"
     
-    st.components.v1.iframe(gsheet_iframe_url, height=650, scrolling=True)
+    st.components.v1.iframe(gsheet_iframe_url, height=680, scrolling=True)
 
 # FOOTER BADGE
 st.markdown("---")

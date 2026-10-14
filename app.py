@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling & Explicit Button Overrides
+# Custom High-End Styling & Full Hover Effects Fix
 st.markdown("""
     <style>
     .stApp {
@@ -42,13 +42,20 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Executive Metric Cards Glassmorphism */
+    /* Executive Metric Cards Glassmorphism & Hover Cursor Effects */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
         border-radius: 16px !important;
         padding: 16px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-5px) scale(1.01) !important;
+        border-color: #0284C7 !important;
+        box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2) !important;
     }
     div[data-testid="stMetric"] label {
         color: #475569 !important;
@@ -62,7 +69,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
-    /* Cards Styling */
+    /* Cards Styling & Smooth Cursor Hover Effects */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -70,7 +77,15 @@ st.markdown("""
         border-left: 6px solid #0284C7;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 12px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
     }
+    .today-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12) !important;
+        border-left-width: 8px !important;
+    }
+    
     .today-card-absent {
         background: #FFF1F2;
         padding: 18px 22px;
@@ -78,6 +93,13 @@ st.markdown("""
         border-left: 6px solid #E11D48;
         box-shadow: 0 4px 12px rgba(225,29,72,0.05);
         margin-bottom: 12px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+    }
+    .today-card-absent:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(225,29,72,0.15) !important;
+        border-left-width: 8px !important;
     }
 
     /* Status Pills */
@@ -89,24 +111,23 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* ABSOLUTE STREAMLIT BUTTON OVERRIDE (DARK BLUE BG + WHITE BOLD TEXT) */
-    div[data-testid="stSidebar"] button {
+    /* ULTIMATE BUTTON CSS OVERRIDE (FORCED HIGH CONTRAST) */
+    div[data-testid="stSidebar"] div.stButton > button {
         background-color: #0284C7 !important;
-        border: 2px solid #38BDF8 !important;
+        border: 1px solid #38BDF8 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
     }
-    div[data-testid="stSidebar"] button p,
-    div[data-testid="stSidebar"] button span,
-    div[data-testid="stSidebar"] button div {
+    div[data-testid="stSidebar"] div.stButton > button * {
         color: #FFFFFF !important;
         font-weight: 900 !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
     }
-    div[data-testid="stSidebar"] button:hover {
+    div[data-testid="stSidebar"] div.stButton > button:hover {
         background-color: #0369A1 !important;
+        border-color: #0284C7 !important;
     }
 
     .sidebar-logo-card {
@@ -121,32 +142,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME MULTI-SOURCE CSV FETCH ENGINE
+# DIRECT REALTIME GOOGLE SHEETS LIVE PARSER
 # ---------------------------------------------------------
 GSHEET_PUB_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
-GSHEET_GVIZ_CSV = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
 
-@st.cache_data(ttl=0)
-def fetch_live_attendance_matrix():
-    # Attempt 1: Fetch from GVIZ October Sheet
+@st.cache_data(ttl=0) # Zero Latency Direct Read
+def load_live_csv():
     try:
-        resp = requests.get(GSHEET_GVIZ_CSV, timeout=5)
-        if resp.status_code == 200 and len(resp.content) > 100:
-            return pd.read_csv(io.StringIO(resp.text), header=None, dtype=str).fillna("")
+        req = requests.get(GSHEET_PUB_CSV, timeout=8)
+        if req.status_code == 200:
+            return pd.read_csv(io.StringIO(req.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
-
-    # Attempt 2: Fetch from Published CSV
-    try:
-        resp = requests.get(GSHEET_PUB_CSV, timeout=5)
-        if resp.status_code == 200 and len(resp.content) > 100:
-            return pd.read_csv(io.StringIO(resp.text), header=None, dtype=str).fillna("")
-    except Exception:
-        pass
-
     return pd.DataFrame()
 
-# Official 24 Staff Roster
+# Official Roster List
 official_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
@@ -228,24 +238,24 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Live Matrix Data
-    raw_df = fetch_live_attendance_matrix()
+    # Read Live Matrix
+    raw_df = load_live_csv()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Detect today column index (searching for 14-Oct)
+        # Detect exact date column dynamically
         today_col_idx = None
-        for r_idx in range(min(15, len(raw_df))):
+        for r_idx in range(min(10, len(raw_df))):
             row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
             for c_idx, cell in enumerate(row_cells):
-                if f"{day_num}-oct" in cell or cell == day_num or "14-oct" in cell:
+                if f"{day_num}-oct" in cell or cell == day_num or cell == "14-oct-wed":
                     today_col_idx = c_idx
                     break
             if today_col_idx is not None:
                 break
 
-        # Extract Attendance per Staff
+        # Match staff and get status
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]
@@ -258,7 +268,6 @@ if view_mode == "📍 Today's Live Attendance":
             for r_idx in range(len(raw_df)):
                 row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
                 
-                # If first and last name match this row
                 if parts[0] in row_str and parts[-1] in row_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -281,33 +290,8 @@ if view_mode == "📍 Today's Live Attendance":
                 "Remarks": remarks_found
             })
     else:
-        # Emergency Override Mapping if Sheet drops connection
-        today_display_list = [
-            {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Field Travel / Regional Operations"},
-            {"Name": "Aldrin B. Librero", "Position": "PDO IV", "Status": "❌ ABSENT", "Remarks": "Official Leave / Sick Leave"},
-            {"Name": "Sowad Repors Samporna", "Position": "SWO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Famiah Crista O. Navarro", "Position": "SWO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Areej M. Balindong", "Position": "SWO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Litecy L. Gatabon", "Position": "FA III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
-            {"Name": "Dharyl James L. Waniwan", "Position": "PDO III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
-            {"Name": "Stephen P. Celo", "Position": "PDO III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
-            {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
-            {"Name": "Louie B. Idulsa", "Position": "ITO I", "Status": "❌ ABSENT", "Remarks": "Official Leave / Absent"},
-            {"Name": "Whilmar B. Porras", "Position": "TS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Jelyn A. Damasing", "Position": "PDO II", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
-            {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Abdul Japar M. Amentao", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Florence Harriet M. Tangente", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Hezam M. Dubar", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "April Joy Y. Saburnido", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "King Mark B. Ponce", "Position": "PDO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Limuel C. Magloyuan", "Position": "ADAS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Edmund Plastina", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
-            {"Name": "Lawrence R. Pichay", "Position": "ADAS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"}
-        ]
+        # Emergency backup mapping
+        today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
 
     # Realtime Metric Counters
     cnt_total = len(today_display_list)

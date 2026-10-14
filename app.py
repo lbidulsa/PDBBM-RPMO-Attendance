@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling with Travel Note Box Styling
+# Custom High-End Styling
 st.markdown("""
     <style>
     .stApp {
@@ -177,7 +177,6 @@ def fetch_live_json_with_comments():
                         note = ""
                         if cell:
                             val = str(cell.get('v', '') or cell.get('f', ''))
-                            note = str(cell.get('p', {}).get('style', '') or '') 
                         row_cells.append({"val": val, "note": note})
                     parsed_table.append(row_cells)
                 return parsed_table
@@ -216,9 +215,9 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Default Travel Remarks Lookup
-default_travel_remarks = {
-    "Atty. Edgar G. Requilme": "To facilitate the production of the PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays.",
+# Realtime Notes Lookup for Official Travel Staff
+travel_remarks_lookup = {
+    "Atty. Edgar G. Requilme": "RMDC @El Salvador",
     "Litecy L. Gatabon": "Official Field Travel / Financial Monitoring",
     "Dharyl James L. Waniwan": "Official Travel / Field Work & PAMANA Activity",
     "Stephen P. Celo": "Official Travel / Field Work & PAMANA Activity",
@@ -325,7 +324,7 @@ if view_mode == "📍 Today's Live Attendance":
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
-                            travel_purpose = default_travel_remarks.get(e_name, "Official Travel / Field Duty Assignment")
+                            travel_purpose = travel_remarks_lookup.get(e_name, "Official Travel / Field Duty")
                         elif "ONSITE" in val or "PRESENT" in val or val == "P" or "SITE" in val:
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
@@ -362,10 +361,29 @@ if view_mode == "📍 Today's Live Attendance":
             st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Status: {ab['Remarks']}*")
         st.markdown("<br>", unsafe_allow_html=True)
 
+    # DROPDOWN FILTER FOR ONSITE, TRAVEL, AND ABSENT
     st.markdown("#### 👤 Individual Staff Status Cards:")
+    
+    col_filter, _ = st.columns([2, 2])
+    with col_filter:
+        status_filter = st.selectbox(
+            "🔍 Filter Staff Status View:",
+            ["All Staff (24)", "🏢 Onsite Only", "🚗 Official Travel Only", "❌ Absent Only"]
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Filtered List Logic
+    filtered_display_list = today_display_list
+    if "Onsite" in status_filter:
+        filtered_display_list = [item for item in today_display_list if "ONSITE" in item["Status"]]
+    elif "Travel" in status_filter:
+        filtered_display_list = [item for item in today_display_list if "TRAVEL" in item["Status"]]
+    elif "Absent" in status_filter:
+        filtered_display_list = [item for item in today_display_list if "ABSENT" in item["Status"]]
 
     # Render Cards with Sanitized HTML
-    for log in today_display_list:
+    for log in filtered_display_list:
         is_absent = "ABSENT" in log["Status"]
         is_travel = "TRAVEL" in log["Status"]
         
@@ -378,7 +396,7 @@ if view_mode == "📍 Today's Live Attendance":
         else:
             pill_class = "pill-absent"
 
-        purpose_box = f'<div class="travel-purpose-box">📌 <b>TRAVEL PURPOSE / DETAILS:</b><br>{log["Purpose"]}</div>' if (is_travel and log["Purpose"]) else ''
+        purpose_box = f'<div class="travel-purpose-box">📌 <b>TRAVEL LOCATION / PURPOSE:</b><br>{log["Purpose"]}</div>' if (is_travel and log["Purpose"]) else ''
 
         card_html = f'<div class="{card_class}"><div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;"><div style="flex: 1; min-width: 280px;"><h3 style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">👤 {log["Name"]} <span style="font-size:13px; color:#64748B; font-weight:600;">({log["Position"]})</span></h3><p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {log["Remarks"]}</p>{purpose_box}</div><div><span class="{pill_class}">{log["Status"]}</span></div></div></div>'
 

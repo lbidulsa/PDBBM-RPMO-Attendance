@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & Full Hover Effects Fix
+# Custom High-End Styling & Hover Effects
 st.markdown("""
     <style>
     .stApp {
@@ -111,23 +111,25 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* ULTIMATE BUTTON CSS OVERRIDE (FORCED HIGH CONTRAST) */
+    /* ABSOLUTE STREAMLIT BUTTON OVERRIDE (FORCED HIGH CONTRAST DARK TEXT) */
     div[data-testid="stSidebar"] div.stButton > button {
-        background-color: #0284C7 !important;
-        border: 1px solid #38BDF8 !important;
+        background-color: #38BDF8 !important;
+        border: 2px solid #0284C7 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4) !important;
     }
     div[data-testid="stSidebar"] div.stButton > button * {
-        color: #FFFFFF !important;
+        color: #0F172A !important;
         font-weight: 900 !important;
-        font-size: 14px !important;
+        font-size: 15px !important;
     }
     div[data-testid="stSidebar"] div.stButton > button:hover {
-        background-color: #0369A1 !important;
-        border-color: #0284C7 !important;
+        background-color: #0284C7 !important;
+    }
+    div[data-testid="stSidebar"] div.stButton > button:hover * {
+        color: #FFFFFF !important;
     }
 
     .sidebar-logo-card {
@@ -142,21 +144,33 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME GOOGLE SHEETS LIVE PARSER
+# DIRECT REALTIME GOOGLE SHEETS LIVE TAB CONNECTOR
 # ---------------------------------------------------------
+# Targeted directly to OCTOBER 2026 sheet tab to prevent defaulting to April tab
+GSHEET_TARGET_OCTOBER = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
 GSHEET_PUB_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
-@st.cache_data(ttl=0) # Zero Latency Direct Read
+@st.cache_data(ttl=0) # Zero Latency Direct Fetch
 def load_live_csv():
+    # Attempt 1: Fetch October Tab directly
     try:
-        req = requests.get(GSHEET_PUB_CSV, timeout=8)
-        if req.status_code == 200:
+        req = requests.get(GSHEET_TARGET_OCTOBER, timeout=6)
+        if req.status_code == 200 and len(req.content) > 100:
             return pd.read_csv(io.StringIO(req.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
+
+    # Attempt 2: Fetch Published Web Link
+    try:
+        req = requests.get(GSHEET_PUB_CSV, timeout=6)
+        if req.status_code == 200 and len(req.content) > 100:
+            return pd.read_csv(io.StringIO(req.text), header=None, dtype=str).fillna("")
+    except Exception:
+        pass
+
     return pd.DataFrame()
 
-# Official Roster List
+# Official 24 RPMO Staff Roster
 official_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
@@ -208,7 +222,7 @@ if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -244,18 +258,18 @@ if view_mode == "📍 Today's Live Attendance":
     today_display_list = []
 
     if not raw_df.empty:
-        # Detect exact date column dynamically
+        # Step 1: Search top 15 rows for exact 14-Oct date header
         today_col_idx = None
-        for r_idx in range(min(10, len(raw_df))):
+        for r_idx in range(min(15, len(raw_df))):
             row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
             for c_idx, cell in enumerate(row_cells):
-                if f"{day_num}-oct" in cell or cell == day_num or cell == "14-oct-wed":
+                if f"{day_num}-oct" in cell or cell == day_num or "14-oct" in cell:
                     today_col_idx = c_idx
                     break
             if today_col_idx is not None:
                 break
 
-        # Match staff and get status
+        # Step 2: Map each employee's status
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]
@@ -268,6 +282,7 @@ if view_mode == "📍 Today's Live Attendance":
             for r_idx in range(len(raw_df)):
                 row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
                 
+                # Flexible name checking
                 if parts[0] in row_str and parts[-1] in row_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -290,7 +305,7 @@ if view_mode == "📍 Today's Live Attendance":
                 "Remarks": remarks_found
             })
     else:
-        # Emergency backup mapping
+        # Fallback if connection fails
         today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
 
     # Realtime Metric Counters

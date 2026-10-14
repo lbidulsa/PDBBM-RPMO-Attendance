@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling
+# Custom High-End Styling & Hover Cursor Effects
 st.markdown("""
     <style>
     .stApp {
@@ -43,7 +43,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Executive Metric Cards Glassmorphism */
+    /* Executive Metric Cards Glassmorphism & Hover Cursor Effects */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -70,7 +70,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
-    /* Cards Styling */
+    /* Cards Styling & Smooth Cursor Hover Effects */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -79,7 +79,14 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
     }
+    .today-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12) !important;
+        border-left-width: 8px !important;
+    }
+    
     .today-card-absent {
         background: #FFF1F2;
         padding: 18px 22px;
@@ -88,6 +95,12 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(225,29,72,0.05);
         margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+    }
+    .today-card-absent:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(225,29,72,0.15) !important;
+        border-left-width: 8px !important;
     }
 
     /* Travel / Note Details Box */
@@ -96,11 +109,12 @@ st.markdown("""
         border: 1px solid #BAE6FD;
         border-left: 4px solid #0284C7;
         border-radius: 8px;
-        padding: 10px 14px;
+        padding: 12px 16px;
         margin-top: 10px;
         font-size: 13px;
         color: #0369A1;
         line-height: 1.5;
+        word-wrap: break-word;
     }
 
     /* Status Pills */
@@ -153,11 +167,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT JSON & PURE PYTHON REGEX ENGINE (NO EXTERNAL BS4)
+# DIRECT LIVE JSON GVIZ PARSER (ZERO MODULE DEPENDENCY)
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
-PUBHTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml"
 
 def normalize_string(s):
     return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
@@ -214,14 +227,14 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Exact Notes Directory from Google Sheet
+# Verified Exact Notes Directory
 staff_notes_directory = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
     "Litecy L. Gatabon": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
-    "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
-    "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
-    "Phoebe Delalyn L. Tidalgo": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
-    "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City"
+    "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
+    "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
+    "Phoebe Delalyn L. Tidalgo": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
+    "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City"
 }
 
 # ---------------------------------------------------------

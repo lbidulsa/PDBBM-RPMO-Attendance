@@ -103,8 +103,8 @@ st.markdown("""
         border-left-width: 8px !important;
     }
 
-    /* Travel / Note Details Box */
-    .travel-purpose-box {
+    /* Universal Note / Remarks Box */
+    .note-purpose-box {
         background: #F0F9FF;
         border: 1px solid #BAE6FD;
         border-left: 4px solid #0284C7;
@@ -227,14 +227,15 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Verified Exact Individual Notes Directory (Including Phoebe Delalyn L. Tidalgo)
+# Universal Staff Notes Directory (For Onsite, Travel, or Absent)
 staff_notes_directory = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
     "Litecy L. Gatabon": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Phoebe Delalyn L. Tidalgo": "Provision of Technical Assistance to Lanao del Norte PAMANA LGU-led staff on Proper SLPA Turn-over to LGU Lanao del Norte Areas and SLPA Livelihood Assessment @LDN",
-    "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City"
+    "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
+    "Jaida Farhana T. Ibrahim": "half day - afternoon only"
 }
 
 # ---------------------------------------------------------
@@ -315,7 +316,7 @@ if view_mode == "📍 Today's Live Attendance":
         
         status_found = "🏢 ONSITE"
         remarks_found = "Onsite Duty / In Office"
-        travel_purpose = ""
+        staff_note = staff_notes_directory.get(e_name, "")
 
         if raw_matrix:
             first_word = normalize_string(e_name.split()[0])
@@ -336,7 +337,6 @@ if view_mode == "📍 Today's Live Attendance":
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
-                            travel_purpose = staff_notes_directory.get(e_name, "Official Travel / Field Duty Assignment")
                         elif "ONSITE" in val or "PRESENT" in val or val == "P" or "SITE" in val:
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
@@ -347,7 +347,7 @@ if view_mode == "📍 Today's Live Attendance":
             "Position": e_pos,
             "Status": status_found,
             "Remarks": remarks_found,
-            "Purpose": travel_purpose
+            "Note": staff_note
         })
 
     # Realtime Counters
@@ -370,7 +370,8 @@ if view_mode == "📍 Today's Live Attendance":
     if absent_staff:
         st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY (REALTIME GSHEET):**")
         for ab in absent_staff:
-            st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Status: {ab['Remarks']}*")
+            note_str = f" (*Note: {ab['Note']}*)" if ab['Note'] else ""
+            st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Status: {ab['Remarks']}*{note_str}")
         st.markdown("<br>", unsafe_allow_html=True)
 
     # DROPDOWN FILTER
@@ -408,9 +409,9 @@ if view_mode == "📍 Today's Live Attendance":
         else:
             pill_class = "pill-absent"
 
-        purpose_box = f'<div class="travel-purpose-box">📌 <b>TRAVEL LOCATION / PURPOSE:</b><br>{log["Purpose"]}</div>' if (is_travel and log["Purpose"]) else ''
+        note_box = f'<div class="note-purpose-box">📌 <b>REMARKS / NOTES:</b><br>{log["Note"]}</div>' if log["Note"] else ''
 
-        card_html = f'<div class="{card_class}"><div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;"><div style="flex: 1; min-width: 280px;"><h3 style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">👤 {log["Name"]} <span style="font-size:13px; color:#64748B; font-weight:600;">({log["Position"]})</span></h3><p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {log["Remarks"]}</p>{purpose_box}</div><div><span class="{pill_class}">{log["Status"]}</span></div></div></div>'
+        card_html = f'<div class="{card_class}"><div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;"><div style="flex: 1; min-width: 280px;"><h3 style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">👤 {log["Name"]} <span style="font-size:13px; color:#64748B; font-weight:600;">({log["Position"]})</span></h3><p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {log["Remarks"]}</p>{note_box}</div><div><span class="{pill_class}">{log["Status"]}</span></div></div></div>'
 
         st.markdown(card_html, unsafe_allow_html=True)
 

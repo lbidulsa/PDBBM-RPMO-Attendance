@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling & Glassmorphism
+# Custom High-End CSS Styling & Dark Sidebar Button Fix
 st.markdown("""
     <style>
     .stApp {
@@ -40,6 +40,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
+    /* Metric Cards Glassmorphism */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -65,6 +66,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
+    /* Today Word Cards */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -87,27 +89,30 @@ st.markdown("""
         margin-bottom: 12px;
     }
 
+    /* Status Pills */
     .pill-onsite { background-color: #DCFCE7; color: #15803D; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BBF7D0; font-size: 13px; }
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-wfh { background-color: #E0F2FE; color: #0369A1; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BAE6FD; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    button[data-baseweb="tab"] {
-        font-size: 14px !important;
-        font-weight: 800 !important;
-        color: #475569 !important;
-        background-color: #E2E8F0 !important;
-        border-radius: 10px 10px 0 0 !important;
-        padding: 12px 18px !important;
-        margin-right: 6px !important;
-    }
-    button[aria-selected="true"] {
+    /* Dark Executive Sidebar Styling & Fixed Button Contrast */
+    section[data-testid="stSidebar"] { background-color: #0F172A !important; }
+    section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
+    
+    div[data-testid="stSidebar"] button {
         background-color: #0284C7 !important;
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 12px !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+    }
+    div[data-testid="stSidebar"] button:hover {
+        background-color: #0369A1 !important;
         color: #FFFFFF !important;
     }
 
-    section[data-testid="stSidebar"] { background-color: #0F172A !important; }
-    section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
     .sidebar-logo-card {
         background: #1E293B;
         border: 1px solid #334155;
@@ -120,21 +125,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS CONNECTOR
+# DIRECT REALTIME PUBLISHED GOOGLE SHEETS CONNECTOR
 # ---------------------------------------------------------
-GSHEETS_BASE_URL = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet="
+# Web Published Link Provided by User
+PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
-@st.cache_data(ttl=0)
-def fetch_raw_gsheet(sheet_name):
+@st.cache_data(ttl=0) # TTL=0 Instant Realtime Fetch with Zero Delay!
+def load_published_live_sheet():
     try:
-        url = f"{GSHEETS_BASE_URL}{sheet_name.replace(' ', '%20')}"
-        df = pd.read_csv(url, header=None) # Read without header to catch merged rows
+        df = pd.read_csv(PUBLISHED_CSV_URL, header=None)
         return df
     except Exception:
         return pd.DataFrame()
 
 # ---------------------------------------------------------
-# HARDCODED 24 OFFICIAL ROSTER FALLBACK (SAFETY NET)
+# OFFICIAL PDBBM-RPMO STAFF ROSTER (24 MEMBERS)
 # ---------------------------------------------------------
 default_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
@@ -164,7 +169,7 @@ default_roster = [
 ]
 
 # ---------------------------------------------------------
-# SIDEBAR NAVIGATION WITH LOGO
+# SIDEBAR NAVIGATION & LOGO
 # ---------------------------------------------------------
 st.sidebar.markdown('<div class="sidebar-logo-card">', unsafe_allow_html=True)
 
@@ -175,14 +180,15 @@ st.sidebar.markdown("<h3 style='margin-top:10px; margin-bottom:2px;'>📋 PDBBM-
 st.sidebar.markdown("<span style='color:#38BDF8; font-size:12px; font-weight:700;'>DSWD FIELD OFFICE X</span>", unsafe_allow_html=True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-st.sidebar.title("🎛️ Portal Views")
+st.sidebar.title("🎛️ Navigation Portal")
 
 view_mode = st.sidebar.radio(
-    "Select Portal View:",
+    "Select View Mode:",
     ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"]
 )
 
-if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+if st.sidebar.button("🔄 Refresh Data Now", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -216,59 +222,56 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Fetch October Raw Sheet Data
-    raw_df = fetch_raw_gsheet("OCTOBER 2026")
+    # Read Published Realtime CSV Sheet
+    raw_df = load_published_live_sheet()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Search for the column index that contains today's date (e.g., "14" or "14-Oct")
+        # Detect today's date column (e.g. searching for "14-Oct-Wed" or "14")
         today_col_idx = None
-        for r in range(min(5, len(raw_df))): # Look in top 5 rows
+        for r in range(min(6, len(raw_df))):
             for c in range(len(raw_df.columns)):
-                cell_str = str(raw_df.iloc[r, c]).strip()
-                if cell_str.startswith(f"{day_num}-") or cell_str == day_num or f" {day_num} " in f" {cell_str} ":
+                cell_s = str(raw_df.iloc[r, c]).strip()
+                if cell_s.startswith(f"{day_num}-") or cell_s == day_num or f" {day_num} " in f" {cell_s} ":
                     today_col_idx = c
                     break
             if today_col_idx is not None:
                 break
 
-        # Scan for employees
+        # Extract Staff Members Data
         for r in range(len(raw_df)):
             row_vals = [str(x).strip() for x in raw_df.iloc[r].values]
-            
-            # Match employee name with default roster
+            row_str_combined = " ".join(row_vals).lower()
+
             for emp in default_roster:
                 e_name = emp["Name"]
                 e_pos = emp["Position"]
                 
-                # Check if this row is the employee
-                first_name_key = e_name.split()[0].lower()
-                last_name_key = e_name.split()[-1].lower()
-                
-                row_text = " ".join(row_vals).lower()
-                if first_name_key in row_text and last_name_key in row_text:
+                f_name = e_name.split()[0].lower()
+                l_name = e_name.split()[-1].lower()
+
+                if f_name in row_str_combined and l_name in row_str_combined:
                     status_found = "🏢 ONSITE"
-                    remarks_found = "In Office - Onsite"
+                    remarks_found = "Onsite Duty / In Office"
 
                     if today_col_idx is not None and today_col_idx < len(row_vals):
                         val = str(row_vals[today_col_idx]).strip().upper()
 
-                        if "ABSENT" in val or val == "A" or "LEAVE" in val:
+                        if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
                             status_found = "❌ ABSENT"
-                            remarks_found = "Official Leave / Absent in Google Sheet"
+                            remarks_found = "Official Leave / Absent"
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
-                            remarks_found = "Official Travel / Field Work"
-                        elif "WFH" in val:
+                            remarks_found = "Official Travel / Field Monitoring"
+                        elif "WFH" in val or "REMOTE" in val:
                             status_found = "💻 WORK FROM HOME"
                             remarks_found = "Work From Home"
                         elif "ONSITE" in val or "PRESENT" in val or val == "P":
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
 
-                    # Avoid duplicate additions
-                    if not any(d["Name"] == e_name for d in today_display_list):
+                    if not any(item["Name"] == e_name for item in today_display_list):
                         today_display_list.append({
                             "Name": e_name,
                             "Position": e_pos,
@@ -276,7 +279,7 @@ if view_mode == "📍 Today's Live Attendance":
                             "Remarks": remarks_found
                         })
 
-    # If any staff is missing from sheet parse, add them from fallback roster
+    # Fill fallback if any missing
     parsed_names = [d["Name"] for d in today_display_list]
     for emp in default_roster:
         if emp["Name"] not in parsed_names:
@@ -284,16 +287,17 @@ if view_mode == "📍 Today's Live Attendance":
                 "Name": emp["Name"],
                 "Position": emp["Position"],
                 "Status": "🏢 ONSITE",
-                "Remarks": "In Office - Daily Operations"
+                "Remarks": "Onsite Duty / In Office"
             })
 
-    # Counters
+    # Realtime Metric Counts
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
     cnt_wfh = sum(1 for item in today_display_list if "WFH" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
+    # 5 Executive Metric Cards
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")
@@ -303,7 +307,7 @@ if view_mode == "📍 Today's Live Attendance":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Highlight Absent Staff Alert Box
+    # Highlight Absent Staff Red Alert Box
     absent_staff = [item for item in today_display_list if "ABSENT" in item["Status"]]
     if absent_staff:
         st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY (REALTIME GSHEET):**")
@@ -313,6 +317,7 @@ if view_mode == "📍 Today's Live Attendance":
 
     st.markdown("#### 👤 Individual Staff Status Cards:")
 
+    # Render Cards
     for log in today_display_list:
         is_absent = "ABSENT" in log["Status"]
         card_class = "today-card-absent" if is_absent else "today-card"
@@ -334,7 +339,7 @@ if view_mode == "📍 Today's Live Attendance":
                             👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
                         </h3>
                         <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
-                            <b>Current Status / Remarks:</b> {log['Remarks']}
+                            <b>Current Activity / Status:</b> {log['Remarks']}
                         </p>
                     </div>
                     <div>
@@ -345,31 +350,22 @@ if view_mode == "📍 Today's Live Attendance":
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 2: MONTHLY HISTORICAL REVIEW
+# VIEW 2: MONTHLY HISTORICAL REVIEW (REALTIME MATRIX VIEWER)
 # ---------------------------------------------------------
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
-    months_list = ["APRIL 2026", "MAY 2026", "JUNE 2026", "JULY 2026", "AUGUST 2026", "SEPTEMBER 2026", "OCTOBER 2026"]
-    month_tabs = st.tabs(months_list)
-
-    for idx, m_tab in enumerate(month_tabs):
-        m_name = months_list[idx]
-        with m_tab:
-            st.markdown(f"#### 📊 Google Sheet Live Matrix — **{m_name}**")
-            df_m_live = fetch_raw_gsheet(m_name)
-            
-            if not df_m_live.empty:
-                st.dataframe(df_m_live, use_container_width=True, hide_index=True)
-            else:
-                st.info(f"ℹ️ Loading live data for {m_name} from Google Sheets...")
+    # Embedded HTML iFrame to render the live interactive published Google Sheet
+    gsheet_iframe_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&amp;headers=false"
+    
+    st.components.v1.iframe(gsheet_iframe_url, height=650, scrolling=True)
 
 # FOOTER BADGE
 st.markdown("---")
 st.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #64748B; padding-bottom: 20px;">
-        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Realtime Sync Engine<br>
+        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Realtime Published Sheet Engine<br>
         Designed & Developed by <b>LOUIE B. IDULSA - PDBBM ITO I</b> • DSWD Field Office X
     </div>
     """, 

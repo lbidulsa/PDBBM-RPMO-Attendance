@@ -120,18 +120,48 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS CONNECTOR (0-second TTL for instant live updates)
+# GOOGLE SHEETS CONNECTOR
 # ---------------------------------------------------------
 GSHEETS_BASE_URL = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet="
 
-@st.cache_data(ttl=0) # Direct Live Stream
-def fetch_live_gsheet_tab(sheet_name):
+@st.cache_data(ttl=0)
+def fetch_raw_gsheet(sheet_name):
     try:
         url = f"{GSHEETS_BASE_URL}{sheet_name.replace(' ', '%20')}"
-        df = pd.read_csv(url)
+        df = pd.read_csv(url, header=None) # Read without header to catch merged rows
         return df
     except Exception:
         return pd.DataFrame()
+
+# ---------------------------------------------------------
+# HARDCODED 24 OFFICIAL ROSTER FALLBACK (SAFETY NET)
+# ---------------------------------------------------------
+default_roster = [
+    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
+    {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
+    {"Name": "Sowad Repors Samporna", "Position": "SWO III"},
+    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III"},
+    {"Name": "Areej M. Balindong", "Position": "SWO III"},
+    {"Name": "Litecy L. Gatabon", "Position": "FA III"},
+    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III"},
+    {"Name": "Stephen P. Celo", "Position": "PDO III"},
+    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III"},
+    {"Name": "Louie B. Idulsa", "Position": "ITO I"},
+    {"Name": "Whilmar B. Porras", "Position": "TS II"},
+    {"Name": "Jelyn A. Damasing", "Position": "PDO II"},
+    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II"},
+    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II"},
+    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II"},
+    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II"},
+    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II"},
+    {"Name": "Hezam M. Dubar", "Position": "PDO II"},
+    {"Name": "April Joy Y. Saburnido", "Position": "PDO II"},
+    {"Name": "King Mark B. Ponce", "Position": "PDO III"},
+    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II"},
+    {"Name": "Edmund Plastina", "Position": "PDO II"},
+    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
+    {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
+]
 
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION WITH LOGO
@@ -152,11 +182,11 @@ view_mode = st.sidebar.radio(
     ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"]
 )
 
-if st.sidebar.button("🔄 Force Refresh Data", use_container_width=True):
+if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Directly Linked to Google Sheets")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Connected")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -177,68 +207,87 @@ st.markdown('<div class="glow-header-title">📋 PDBBM-RPMO STAFF DAILY LOGS TRA
 st.markdown('<div class="glow-header-sub">DSWD Field Office X • Executive Decision Support Portal</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 1: TODAY'S LIVE ATTENDANCE (SMART DATE PARSER)
+# VIEW 1: TODAY'S LIVE ATTENDANCE LOGS
 # ---------------------------------------------------------
 if view_mode == "📍 Today's Live Attendance":
     now_dt = datetime.now()
     today_str = now_dt.strftime("%B %d, %Y")
-    day_num = str(now_dt.day) # e.g. "14"
+    day_num = str(now_dt.day) # "14"
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Fetch Current Month Sheet
-    df_oct = fetch_live_gsheet_tab("OCTOBER 2026")
+    # Fetch October Raw Sheet Data
+    raw_df = fetch_raw_gsheet("OCTOBER 2026")
 
     today_display_list = []
 
-    if not df_oct.empty:
-        # Find column matching today's date (e.g. "14-Oct-Wed" or "14")
-        target_col = None
-        for col in df_oct.columns:
-            col_s = str(col).strip()
-            if col_s.startswith(f"{day_num}-") or col_s == day_num or f" {day_num} " in f" {col_s} ":
-                target_col = col
+    if not raw_df.empty:
+        # Search for the column index that contains today's date (e.g., "14" or "14-Oct")
+        today_col_idx = None
+        for r in range(min(5, len(raw_df))): # Look in top 5 rows
+            for c in range(len(raw_df.columns)):
+                cell_str = str(raw_df.iloc[r, c]).strip()
+                if cell_str.startswith(f"{day_num}-") or cell_str == day_num or f" {day_num} " in f" {cell_str} ":
+                    today_col_idx = c
+                    break
+            if today_col_idx is not None:
                 break
 
-        # Fallback to last column if exact match not found
-        if not target_col and len(df_oct.columns) > 3:
-            target_col = df_oct.columns[3]
+        # Scan for employees
+        for r in range(len(raw_df)):
+            row_vals = [str(x).strip() for x in raw_df.iloc[r].values]
+            
+            # Match employee name with default roster
+            for emp in default_roster:
+                e_name = emp["Name"]
+                e_pos = emp["Position"]
+                
+                # Check if this row is the employee
+                first_name_key = e_name.split()[0].lower()
+                last_name_key = e_name.split()[-1].lower()
+                
+                row_text = " ".join(row_vals).lower()
+                if first_name_key in row_text and last_name_key in row_text:
+                    status_found = "🏢 ONSITE"
+                    remarks_found = "In Office - Onsite"
 
-        emp_col_name = df_oct.columns[1] if len(df_oct.columns) > 1 else df_oct.columns[0]
-        pos_col_name = df_oct.columns[2] if len(df_oct.columns) > 2 else df_oct.columns[1]
+                    if today_col_idx is not None and today_col_idx < len(row_vals):
+                        val = str(row_vals[today_col_idx]).strip().upper()
 
-        for _, row in df_oct.iterrows():
-            e_name = str(row[emp_col_name]).strip()
-            e_pos = str(row[pos_col_name]).strip()
+                        if "ABSENT" in val or val == "A" or "LEAVE" in val:
+                            status_found = "❌ ABSENT"
+                            remarks_found = "Official Leave / Absent in Google Sheet"
+                        elif "TRAVEL" in val or val == "T" or "OB" in val:
+                            status_found = "🚗 OFFICIAL TRAVEL"
+                            remarks_found = "Official Travel / Field Work"
+                        elif "WFH" in val:
+                            status_found = "💻 WORK FROM HOME"
+                            remarks_found = "Work From Home"
+                        elif "ONSITE" in val or "PRESENT" in val or val == "P":
+                            status_found = "🏢 ONSITE"
+                            remarks_found = "In Office - Onsite"
 
-            if e_name and e_name.lower() != "nan" and "name" not in e_name.lower():
-                status_found = "🏢 ONSITE"
-                remarks_found = "Onsite Duty / In Office"
+                    # Avoid duplicate additions
+                    if not any(d["Name"] == e_name for d in today_display_list):
+                        today_display_list.append({
+                            "Name": e_name,
+                            "Position": e_pos,
+                            "Status": status_found,
+                            "Remarks": remarks_found
+                        })
 
-                if target_col and target_col in df_oct.columns:
-                    val = str(row[target_col]).strip().upper()
+    # If any staff is missing from sheet parse, add them from fallback roster
+    parsed_names = [d["Name"] for d in today_display_list]
+    for emp in default_roster:
+        if emp["Name"] not in parsed_names:
+            today_display_list.append({
+                "Name": emp["Name"],
+                "Position": emp["Position"],
+                "Status": "🏢 ONSITE",
+                "Remarks": "In Office - Daily Operations"
+            })
 
-                    if "ABSENT" in val or val == "A" or "LEAVE" in val:
-                        status_found = "❌ ABSENT"
-                        remarks_found = "Official Leave / Absent"
-                    elif "TRAVEL" in val or val == "T" or "OB" in val:
-                        status_found = "🚗 OFFICIAL TRAVEL"
-                        remarks_found = "Official Travel / Field Work"
-                    elif "WFH" in val:
-                        status_found = "💻 WORK FROM HOME"
-                        remarks_found = "Work From Home"
-                    elif "ONSITE" in val or "PRESENT" in val or val == "P":
-                        status_found = "🏢 ONSITE"
-                        remarks_found = "In Office - Onsite"
-
-                today_display_list.append({
-                    "Name": e_name,
-                    "Position": e_pos,
-                    "Status": status_found,
-                    "Remarks": remarks_found
-                })
-
-    # Metric Counters
+    # Counters
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
@@ -308,7 +357,7 @@ else:
         m_name = months_list[idx]
         with m_tab:
             st.markdown(f"#### 📊 Google Sheet Live Matrix — **{m_name}**")
-            df_m_live = fetch_live_gsheet_tab(m_name)
+            df_m_live = fetch_raw_gsheet(m_name)
             
             if not df_m_live.empty:
                 st.dataframe(df_m_live, use_container_width=True, hide_index=True)

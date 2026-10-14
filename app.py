@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & Strict Button Color Fix
+# Custom Styling & Explicit Button Color Overrides
 st.markdown("""
     <style>
     .stApp {
@@ -40,7 +40,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Metric Cards Glassmorphism */
+    /* Executive Metric Cards Glassmorphism */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -87,25 +87,23 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* REFRESH BUTTON CONTRAST FIX */
-    div[data-testid="stSidebar"] .stButton > button {
-        background-color: #38BDF8 !important;
-        color: #0F172A !important;
-        font-weight: 900 !important;
-        border: none !important;
+    /* FIX SIDEBAR BUTTON CONTRAST & VISIBILITY */
+    div[data-testid="stSidebar"] button {
+        background: linear-gradient(90deg, #0284C7, #0369A1) !important;
+        color: #FFFFFF !important;
+        border: 1px solid #38BDF8 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
     }
-    div[data-testid="stSidebar"] .stButton > button * {
-        color: #0F172A !important;
-        font-weight: 900 !important;
-    }
-    div[data-testid="stSidebar"] .stButton > button:hover {
-        background-color: #0284C7 !important;
-    }
-    div[data-testid="stSidebar"] .stButton > button:hover * {
+    div[data-testid="stSidebar"] button * {
         color: #FFFFFF !important;
+        font-weight: 900 !important;
+        font-size: 15px !important;
+    }
+    div[data-testid="stSidebar"] button:hover {
+        background: #0284C7 !important;
+        border-color: #38BDF8 !important;
     }
 
     .sidebar-logo-card {
@@ -214,39 +212,36 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Realtime Published CSV Sheet
+    # Read Published Realtime CSV Sheet
     raw_df = load_published_live_sheet()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Detect today's column (searching for 14-Oct)
+        # Step 1: Find the exact column for today (e.g., '14-Oct-Wed' or '14')
         today_col_idx = None
-        for r in range(min(6, len(raw_df))):
+        for r in range(min(10, len(raw_df))):
             for c in range(len(raw_df.columns)):
-                cell_s = str(raw_df.iloc[r, c]).strip().lower()
-                if f"{day_num}-oct" in cell_s or cell_s == day_num:
+                cell_val = str(raw_df.iloc[r, c]).strip().lower()
+                if f"{day_num}-oct" in cell_val or cell_val == day_num or cell_val.startswith(f"{day_num}-"):
                     today_col_idx = c
                     break
             if today_col_idx is not None:
                 break
 
-        # Dynamic Row Matcher with Space Normalization
+        # Step 2: Iterate over roster and match status from Google Sheet
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]
             
-            # Clean spaces for strict matching
-            clean_target_name = "".join(e_name.lower().split())
+            f_word = e_name.split()[0].lower()
+            l_word = e_name.split()[-1].lower()
+
             status_found = "🏢 ONSITE"
             remarks_found = "Onsite Duty / In Office"
 
             for r in range(len(raw_df)):
-                row_str_combined = "".join([str(x).lower() for x in raw_df.iloc[r].values])
-                
-                # Flexible name match (e.g., 'louie' and 'idulsa')
-                f_word = e_name.split()[0].lower()
-                l_word = e_name.split()[-1].lower()
+                row_str_combined = " ".join([str(x).lower() for x in raw_df.iloc[r].values])
 
                 if f_word in row_str_combined and l_word in row_str_combined:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
@@ -295,7 +290,7 @@ if view_mode == "📍 Today's Live Attendance":
 
     st.markdown("#### 👤 Individual Staff Status Cards:")
 
-    # Render Individual Status Cards
+    # Render Cards
     for log in today_display_list:
         is_absent = "ABSENT" in log["Status"]
         card_class = "today-card-absent" if is_absent else "today-card"

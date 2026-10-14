@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & Explicit Button Overrides
+# Custom High-End Styling & Explicit Button CSS
 st.markdown("""
     <style>
     .stApp {
@@ -40,7 +40,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Executive Metric Cards Glassmorphism */
+    /* Executive Metric Cards */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -60,7 +60,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
-    /* Today Word Cards */
+    /* Cards Styling */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -87,27 +87,17 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* ABSOLUTE FIX FOR REFRESH BUTTON */
-    div[data-testid="stSidebar"] div.stButton > button {
-        background-color: #0284C7 !important;
-        color: #FFFFFF !important;
-        font-weight: 900 !important;
-        border: 2px solid #38BDF8 !important;
+    /* FORCE STREAMLIT REFRESH BUTTON COLOR TO SOLID DARK BLUE ON LIGHT ACCENT */
+    section[data-testid="stSidebar"] button[kind="primary"],
+    section[data-testid="stSidebar"] button[data-testid="baseButton-secondary"] {
+        background: #38BDF8 !important;
+        border: none !important;
         border-radius: 10px !important;
-        padding: 10px 16px !important;
-        width: 100% !important;
-        display: block !important;
     }
-    div[data-testid="stSidebar"] div.stButton > button p,
-    div[data-testid="stSidebar"] div.stButton > button span,
-    div[data-testid="stSidebar"] div.stButton > button div {
-        color: #FFFFFF !important;
+    section[data-testid="stSidebar"] button * {
+        color: #0F172A !important;
         font-weight: 900 !important;
         font-size: 15px !important;
-    }
-    div[data-testid="stSidebar"] div.stButton > button:hover {
-        background-color: #0369A1 !important;
-        border-color: #0284C7 !important;
     }
 
     .sidebar-logo-card {
@@ -129,8 +119,8 @@ PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sef
 @st.cache_data(ttl=0)
 def load_published_live_sheet():
     try:
-        df = pd.read_csv(PUBLISHED_CSV_URL, header=None)
-        return df
+        df = pd.read_csv(PUBLISHED_CSV_URL, header=None, dtype=str)
+        return df.fillna("")
     except Exception:
         return pd.DataFrame()
 
@@ -186,7 +176,7 @@ if st.sidebar.button("🔄 Refresh Data Now", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -222,34 +212,35 @@ if view_mode == "📍 Today's Live Attendance":
     today_display_list = []
 
     if not raw_df.empty:
-        # Step 1: Detect column index for 14-Oct
+        # Robust Column Detector: Find the exact column index for 14-Oct
         today_col_idx = None
-        for r in range(min(10, len(raw_df))):
-            for c in range(len(raw_df.columns)):
-                cell_val = str(raw_df.iloc[r, c]).strip().lower()
-                if f"{day_num}-oct" in cell_val or cell_val == day_num:
-                    today_col_idx = c
+        for r_idx in range(min(15, len(raw_df))):
+            row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
+            for c_idx, cell in enumerate(row_cells):
+                if "14-oct" in cell or cell == "14" or cell == "14-oct-wed":
+                    today_col_idx = c_idx
                     break
             if today_col_idx is not None:
                 break
 
-        # Step 2: Extract status for all 24 staff members
+        # Extract Attendance per Staff
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]
             
-            f_word = e_name.split()[0].lower()
-            l_word = e_name.split()[-1].lower()
-
+            # Split key search terms
+            parts = [p.lower() for p in e_name.replace('.', '').split() if len(p) > 2]
+            
             status_found = "🏢 ONSITE"
             remarks_found = "Onsite Duty / In Office"
 
-            for r in range(len(raw_df)):
-                row_str_combined = " ".join([str(x).lower() for x in raw_df.iloc[r].values])
-
-                if f_word in row_str_combined and l_word in row_str_combined:
+            for r_idx in range(len(raw_df)):
+                row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
+                
+                # If first and last name match this row
+                if parts[0] in row_str and parts[-1] in row_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
-                        val = str(raw_df.iloc[r, today_col_idx]).strip().upper()
+                        val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
 
                         if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
                             status_found = "❌ ABSENT"
@@ -268,6 +259,9 @@ if view_mode == "📍 Today's Live Attendance":
                 "Status": status_found,
                 "Remarks": remarks_found
             })
+    else:
+        # Safety Net
+        today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
 
     # Realtime Metric Counters
     cnt_total = len(today_display_list)

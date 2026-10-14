@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & Explicit Button Overrides
+# Custom High-End Styling & Absolute Button Color Override
 st.markdown("""
     <style>
     .stApp {
@@ -42,7 +42,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Executive Metric Cards Glassmorphism & Hover Cursor Effects */
+    /* Metric Cards Glassmorphism & Cursor Effects */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -69,7 +69,7 @@ st.markdown("""
         font-size: 26px !important;
     }
 
-    /* Cards Styling & Smooth Cursor Hover Effects */
+    /* Individual Cards & Cursor Hover Effects */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -107,32 +107,27 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* Dark Executive Sidebar Styling */
+    /* Dark Executive Sidebar Styling & Absolute High Contrast Refresh Button */
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* HIGH CONTRAST REFRESH BUTTON FIX */
-    div[data-testid="stSidebar"] button {
-        background-color: #38BDF8 !important;
-        border: 2px solid #0284C7 !important;
+    div[data-testid="stSidebar"] .stButton > button {
+        background-color: #0284C7 !important;
+        border: 2px solid #38BDF8 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
     }
-    div[data-testid="stSidebar"] button p,
-    div[data-testid="stSidebar"] button span,
-    div[data-testid="stSidebar"] button div {
-        color: #0F172A !important;
+    div[data-testid="stSidebar"] .stButton > button p,
+    div[data-testid="stSidebar"] .stButton > button span,
+    div[data-testid="stSidebar"] .stButton > button div {
+        color: #FFFFFF !important;
         font-weight: 900 !important;
         font-size: 15px !important;
     }
-    div[data-testid="stSidebar"] button:hover {
-        background-color: #0284C7 !important;
-    }
-    div[data-testid="stSidebar"] button:hover p,
-    div[data-testid="stSidebar"] button:hover span {
-        color: #FFFFFF !important;
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #0369A1 !important;
     }
 
     .sidebar-logo-card {
@@ -147,34 +142,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT LIVE GOOGLE SHEETS PARSER (NO CACHE)
+# DIRECT LIVE GOOGLE SHEETS CONNECTOR (NO CACHE)
 # ---------------------------------------------------------
-GSHEET_PUB_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
-GSHEET_GVIZ_CSV = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
+PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
 @st.cache_data(ttl=0)
-def load_live_sheet_matrix():
-    # Primary Stream Direct Fetch
+def fetch_live_matrix():
     try:
+        # Bypassing cache via timestamp parameter
         ts = int(datetime.now().timestamp())
-        url = f"{GSHEET_GVIZ_CSV}&_cachebust={ts}"
-        resp = requests.get(url, timeout=5)
-        if resp.status_code == 200:
-            return pd.read_csv(io.StringIO(resp.text), header=None, dtype=str).fillna("")
+        req = requests.get(f"{PUBLISHED_CSV_URL}&_ts={ts}", timeout=6)
+        if req.status_code == 200 and len(req.text) > 50:
+            df = pd.read_csv(io.StringIO(req.text), header=None, dtype=str)
+            return df.fillna("")
     except Exception:
         pass
-
-    # Secondary Stream Direct Fetch
-    try:
-        resp = requests.get(GSHEET_PUB_CSV, timeout=5)
-        if resp.status_code == 200:
-            return pd.read_csv(io.StringIO(resp.text), header=None, dtype=str).fillna("")
-    except Exception:
-        pass
-
     return pd.DataFrame()
 
-# Official 24 Staff Roster
+# Official 24 Staff Members List
 official_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
@@ -226,7 +211,7 @@ if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Connected")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -256,13 +241,13 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Live Matrix
-    raw_df = load_live_sheet_matrix()
+    # Read Published Realtime Data
+    raw_df = fetch_live_matrix()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Detect column index for today (14-Oct-Wed)
+        # Step 1: Detect today column index (searching for 14-Oct-Wed or 14)
         today_col_idx = None
         for r_idx in range(min(15, len(raw_df))):
             row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
@@ -273,7 +258,7 @@ if view_mode == "📍 Today's Live Attendance":
             if today_col_idx is not None:
                 break
 
-        # Match staff with rows
+        # Step 2: Extract status for each employee
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]
@@ -286,6 +271,7 @@ if view_mode == "📍 Today's Live Attendance":
             for r_idx in range(len(raw_df)):
                 row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
                 
+                # Check for first and last name match
                 if parts[0] in row_str and parts[-1] in row_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -308,7 +294,7 @@ if view_mode == "📍 Today's Live Attendance":
                 "Remarks": remarks_found
             })
     else:
-        # Default Full Roster Load
+        # Strict Dynamic Default Mapping
         today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
 
     # Realtime Metric Counters

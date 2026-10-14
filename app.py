@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime, date
-from supabase import create_client, Client
+from datetime import datetime
 
 # ---------------------------------------------------------
 # PAGE CONFIGURATION & EXECUTIVE LIGHT UI
@@ -14,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End CSS Styling & Glassmorphism Effects
+# Custom High-End CSS Styling
 st.markdown("""
     <style>
     .stApp {
@@ -77,10 +76,6 @@ st.markdown("""
         margin-bottom: 12px;
         transition: all 0.25s ease-in-out;
     }
-    .today-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-    }
     .today-card-absent {
         background: #FFF1F2;
         padding: 18px 22px;
@@ -124,42 +119,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# REAL-TIME DYNAMIC GOOGLE SHEETS CONNECTOR
+# DIRECT REALTIME GOOGLE SHEETS LIVE CONNECTOR
 # ---------------------------------------------------------
-# Google Sheet CSV Exporter for Live Data Fetching
 GSHEETS_BASE_URL = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet="
 
-@st.cache_data(ttl=5) # Auto Refresh Realtime every 5 seconds!
-def fetch_live_gsheet_tab(sheet_name):
+@st.cache_data(ttl=0) # TTL=0 means NO CACHE! Instant Live Refresh from Google Sheets!
+def fetch_live_gsheet(sheet_name):
     try:
         url = f"{GSHEETS_BASE_URL}{sheet_name.replace(' ', '%20')}"
         df = pd.read_csv(url)
         return df
     except Exception:
         return pd.DataFrame()
-
-# SUPABASE CONNECTION
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://YOUR_SUPABASE_PROJECT_ID.supabase.co")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "YOUR_SUPABASE_ANON_KEY")
-
-@st.cache_resource
-def init_supabase():
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
-
-try:
-    supabase: Client = init_supabase()
-except Exception:
-    supabase = None
-
-def fetch_supabase_today_logs():
-    if supabase:
-        try:
-            res = supabase.table("rpmo_attendance").select("*").eq("attendance_date", str(date.today())).execute()
-            if res.data:
-                return pd.DataFrame(res.data)
-        except Exception:
-            pass
-    return pd.DataFrame()
 
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION
@@ -169,15 +140,18 @@ st.sidebar.markdown("### 📋 PDBBM-RPMO PORTAL")
 st.sidebar.markdown("<span style='color:#38BDF8; font-size:12px; font-weight:700;'>DSWD FIELD OFFICE X</span>", unsafe_allow_html=True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-st.sidebar.title("🎛️ Navigation Portal")
+st.sidebar.title("🎛️ Portal Views")
 
 view_mode = st.sidebar.radio(
-    "Select Portal View:",
-    ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review", "✍️ Staff Log Entry Form"]
+    "Select View Mode:",
+    ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"]
 )
 
+if st.sidebar.button("🔄 Force Refresh Data"):
+    st.rerun()
+
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets & Supabase Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Directly Linked to Google Sheets")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -192,88 +166,77 @@ st.sidebar.markdown(
 )
 
 # ---------------------------------------------------------
-# HEADER SECTION
+# HEADER
 # ---------------------------------------------------------
 st.markdown('<div class="glow-header-title">📋 PDBBM-RPMO STAFF DAILY LOGS TRACKER</div>', unsafe_allow_html=True)
 st.markdown('<div class="glow-header-sub">DSWD Field Office X • Executive Decision Support Portal</div>', unsafe_allow_html=True)
 
-# Fetch Dynamic Roster Live from Google Sheet
-df_roster_live = fetch_live_gsheet_tab("OCTOBER 2026") # Primary Roster Sheet
-
-if not df_roster_live.empty and 'Name of Employee' in df_roster_live.columns:
-    df_roster_clean = df_roster_live[['Name of Employee', 'Position']].dropna().drop_duplicates()
-    roster_list = [{"Name": row['Name of Employee'], "Position": row['Position']} for _, row in df_roster_clean.iterrows()]
-else:
-    # Fallback to updated roster from your exact image if sheet is loading
-    roster_list = [
-        {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
-        {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
-        {"Name": "Sowad Repors Samporna", "Position": "SWO III"},
-        {"Name": "Famiah Crista O. Navarro", "Position": "SWO III"},
-        {"Name": "Areej M. Balindong", "Position": "SWO III"},
-        {"Name": "Litecy L. Gatabon", "Position": "FA III"},
-        {"Name": "Dharyl James L. Waniwan", "Position": "PDO III"},
-        {"Name": "Stephen P. Celo", "Position": "PDO III"},
-        {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III"},
-        {"Name": "Louie B. Idulsa", "Position": "ITO I"},
-        {"Name": "Whilmar B. Porras", "Position": "TS II"},
-        {"Name": "Jelyn A. Damasing", "Position": "PDO II"},
-        {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II"},
-        {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II"},
-        {"Name": "Abdul Japar M. Amentao", "Position": "PDO II"},
-        {"Name": "Florence Harriet M. Tangente", "Position": "PDO II"},
-        {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II"},
-        {"Name": "Hezam M. Dubar", "Position": "PDO II"},
-        {"Name": "April Joy Y. Saburnido", "Position": "PDO II"},
-        {"Name": "King Mark B. Ponce", "Position": "PDO III"},
-        {"Name": "Limuel C. Magloyuan", "Position": "ADAS II"},
-        {"Name": "Edmund Plastina", "Position": "PDO II"},
-        {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
-        {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
-    ]
-
 # ---------------------------------------------------------
-# VIEW 1: TODAY'S LIVE ATTENDANCE LOGS
+# VIEW 1: TODAY'S LIVE ATTENDANCE (PARSED DIRECT FROM GOOGLE SHEETS)
 # ---------------------------------------------------------
 if view_mode == "📍 Today's Live Attendance":
-    today_str = datetime.now().strftime("%B %d, %Y")
-    st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
+    now_dt = datetime.now()
+    current_month_str = now_dt.strftime("%B %Y").upper() # e.g. "OCTOBER 2026"
+    today_day_col = str(now_dt.day) # e.g. "14"
+    
+    st.markdown(f"### 📍 Attendance Status Today — **{now_dt.strftime('%B %d, %Y')}**")
 
-    # Fetch Cloud Supabase Logs for Today
-    df_sp_today = fetch_supabase_today_logs()
-
-    # Build Merged Today's Status
+    # Fetch Current Month Sheet
+    df_curr_sheet = fetch_live_gsheet(current_month_str)
+    
     today_display_list = []
-    for emp in roster_list:
-        e_name = emp["Name"]
-        e_pos = emp["Position"]
-        
-        # Check if logged in Supabase
-        if not df_sp_today.empty and e_name in df_sp_today['staff_name'].values:
-            matched = df_sp_today[df_sp_today['staff_name'] == e_name].iloc[-1]
-            today_display_list.append({
-                "Name": e_name, "Position": e_pos,
-                "Status": matched.get('status', '🏢 ONSITE'),
-                "TimeIn": matched.get('time_in', '08:00 AM'),
-                "Remarks": matched.get('activity_remarks', 'In Office - Operations')
-            })
-        else:
-            # Default Status
-            today_display_list.append({
-                "Name": e_name, "Position": e_pos,
-                "Status": "🏢 ONSITE",
-                "TimeIn": "08:00 AM",
-                "Remarks": "In Office - Daily Operations"
-            })
 
-    # Calculate Realtime Counters
+    if not df_curr_sheet.empty:
+        # Clean column names
+        df_curr_sheet.columns = [str(c).strip() for c in df_curr_sheet.columns]
+        
+        # Locate Employee Name and Position columns
+        emp_col = [c for c in df_curr_sheet.columns if "Name" in c or "Employee" in c]
+        pos_col = [c for c in df_curr_sheet.columns if "Position" in c]
+
+        if emp_col and pos_col:
+            col_name = emp_col[0]
+            col_pos = pos_col[0]
+
+            for _, row in df_curr_sheet.iterrows():
+                e_name = str(row[col_name]).strip()
+                e_pos = str(row[col_pos]).strip()
+
+                if e_name and e_name != "nan" and "Name of Employee" not in e_name:
+                    status_found = "🏢 ONSITE"
+                    remarks_found = "On Duty / In Office"
+
+                    # Check today's cell value in Google Sheet
+                    if today_day_col in df_curr_sheet.columns:
+                        cell_val = str(row[today_day_col]).strip().upper()
+
+                        if cell_val in ["A", "ABSENT", "LEAVE", "SL", "VL"]:
+                            status_found = "❌ ABSENT"
+                            remarks_found = "Official Leave / Absent in Google Sheet"
+                        elif cell_val in ["T", "TRAVEL", "OB", "OFFICIAL TRAVEL"]:
+                            status_found = "🚗 OFFICIAL TRAVEL"
+                            remarks_found = "Official Travel / Field Work"
+                        elif cell_val in ["WFH", "REMOTE"]:
+                            status_found = "💻 WORK FROM HOME"
+                            remarks_found = "Work From Home"
+                        elif cell_val in ["P", "PRESENT", "ONSITE", "1"]:
+                            status_found = "🏢 ONSITE"
+                            remarks_found = "Onsite Duty"
+
+                    today_display_list.append({
+                        "Name": e_name,
+                        "Position": e_pos,
+                        "Status": status_found,
+                        "Remarks": remarks_found
+                    })
+
+    # Render Metrics
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
     cnt_wfh = sum(1 for item in today_display_list if "WFH" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
-    # 5 Metric Cards
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")
@@ -286,14 +249,13 @@ if view_mode == "📍 Today's Live Attendance":
     # Highlight Absent Staff
     absent_staff = [item for item in today_display_list if "ABSENT" in item["Status"]]
     if absent_staff:
-        st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY:**")
+        st.error("⚠️ **ABSENT STAFF SUMMARY FOR TODAY (FROM GOOGLE SHEET):**")
         for ab in absent_staff:
-            st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Remarks: {ab['Remarks']}*")
+            st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Status: {ab['Remarks']}*")
         st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("#### 👤 Individual Staff Status Cards:")
 
-    # Render Word Cards
     for log in today_display_list:
         is_absent = "ABSENT" in log["Status"]
         card_class = "today-card-absent" if is_absent else "today-card"
@@ -315,7 +277,7 @@ if view_mode == "📍 Today's Live Attendance":
                             👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
                         </h3>
                         <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
-                            <b>Time In:</b> {log['TimeIn']} &nbsp;|&nbsp; <b>Activity / Location:</b> {log['Remarks']}
+                            <b>Current Activity / Location:</b> {log['Remarks']}
                         </p>
                     </div>
                     <div>
@@ -326,10 +288,10 @@ if view_mode == "📍 Today's Live Attendance":
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 2: MONTHLY HISTORICAL REVIEW (LIVE FROM GSHEETS)
+# VIEW 2: MONTHLY HISTORICAL REVIEW
 # ---------------------------------------------------------
-elif view_mode == "🗓️ Monthly Historical Review":
-    st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets)")
+else:
+    st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
     months_list = ["APRIL 2026", "MAY 2026", "JUNE 2026", "JULY 2026", "AUGUST 2026", "SEPTEMBER 2026", "OCTOBER 2026"]
     month_tabs = st.tabs(months_list)
@@ -337,61 +299,20 @@ elif view_mode == "🗓️ Monthly Historical Review":
     for idx, m_tab in enumerate(month_tabs):
         m_name = months_list[idx]
         with m_tab:
-            st.markdown(f"#### 📊 Realtime Google Sheet Data — **{m_name}**")
-            
-            df_m_live = fetch_live_gsheet_tab(m_name)
+            st.markdown(f"#### 📊 Google Sheet Live Matrix — **{m_name}**")
+            df_m_live = fetch_live_gsheet(m_name)
             
             if not df_m_live.empty:
                 st.dataframe(df_m_live, use_container_width=True, hide_index=True)
             else:
                 st.info(f"ℹ️ Loading live data for {m_name} from Google Sheets...")
 
-# ---------------------------------------------------------
-# VIEW 3: STAFF LOG ENTRY FORM
-# ---------------------------------------------------------
-else:
-    st.markdown("### ✍️ Daily Attendance Log Entry Form")
-    
-    with st.form("entry_form", clear_on_submit=True):
-        c_f1, c_f2 = st.columns(2)
-        
-        with c_f1:
-            staff_choice = st.selectbox("👤 Select Staff Name:", [s["Name"] + " (" + s["Position"] + ")" for s in roster_list])
-            work_arr = st.radio("📍 Work Arrangement Status:", ["🏢 ONSITE", "🚗 OFFICIAL TRAVEL", "💻 WORK FROM HOME", "❌ ABSENT"], horizontal=True)
-        
-        with c_f2:
-            time_in_val = st.text_input("🕐 Time In Log:", value=datetime.now().strftime("%I:%M %p"))
-            remarks_val = st.text_area("📝 Activity / Location Remarks:", placeholder="E.g., In Office - Program Data Profiling / Travel to Bukidnon...")
-        
-        submit_log = st.form_submit_button("💾 Save & Sync Realtime Log to Supabase", use_container_width=True)
-        
-        if submit_log:
-            staff_name_clean = staff_choice.split(" (")[0]
-            staff_pos_clean = staff_choice.split(" (")[1].replace(")", "") if "(" in staff_choice else "RPMO Staff"
-            
-            if supabase:
-                try:
-                    payload = {
-                        "attendance_date": str(date.today()),
-                        "staff_name": staff_name_clean,
-                        "position": staff_pos_clean,
-                        "work_arrangement": work_arr,
-                        "time_in": time_in_val,
-                        "activity_remarks": remarks_val if remarks_val else "Logged On Duty",
-                        "status": work_arr
-                    }
-                    supabase.table("rpmo_attendance").insert(payload).execute()
-                    st.success(f"✅ Realtime Attendance Log successfully saved for {staff_name_clean}!")
-                    st.rerun()
-                except Exception as ex:
-                    st.error(f"⚠️ Error saving log: {ex}")
-
 # FOOTER BADGE
 st.markdown("---")
 st.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #64748B; padding-bottom: 20px;">
-        ⚙️ <b>PDBBM Executive Multi-Program Decision Support Portal</b> | Realtime Sync Engine<br>
+        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Direct Google Sheets Engine<br>
         Designed & Developed by <b>LOUIE B. IDULSA - PDBBM ITO I</b> • DSWD Field Office X
     </div>
     """, 

@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 import requests
-import json
+import io
 import re
 from datetime import datetime
 import os
 
 # ---------------------------------------------------------
-# PAGE CONFIGURATION & LIGHT EXECUTIVE UI
+# PAGE CONFIGURATION & EXECUTIVE LIGHT UI
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="PDBBM-RPMO Executive Attendance Portal",
@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & High-Contrast Button
+# Custom Styling, Hover Effects, and Explicit Button Contrast Fix
 st.markdown("""
     <style>
     .stApp {
@@ -43,7 +43,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Metric Cards Glassmorphism */
+    /* Executive Metric Cards Glassmorphism & Hover Cursor Effects */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -108,7 +108,7 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* LIGHT SLATE SIDEBAR STYLING */
+    /* EXECUTIVE LIGHT SLATE SIDEBAR STYLING */
     section[data-testid="stSidebar"] { 
         background: linear-gradient(180deg, #E2E8F0 0%, #F1F5F9 100%) !important; 
         border-right: 1px solid #CBD5E1 !important;
@@ -117,24 +117,28 @@ st.markdown("""
         color: #0F172A !important; 
     }
 
-    /* REFRESH BUTTON HIGH-CONTRAST VISIBILITY */
+    /* ABSOLUTE REFRESH BUTTON CONTRAST OVERRIDE (DARK NAVY TEXT ON SKY BLUE) */
     div[data-testid="stSidebar"] .stButton > button {
-        background: #0284C7 !important;
-        border: 2px solid #0369A1 !important;
+        background-color: #38BDF8 !important;
+        border: 2px solid #0284C7 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
     }
     div[data-testid="stSidebar"] .stButton > button p,
     div[data-testid="stSidebar"] .stButton > button span,
     div[data-testid="stSidebar"] .stButton > button div {
-        color: #FFFFFF !important;
+        color: #0F172A !important;
         font-weight: 900 !important;
         font-size: 15px !important;
     }
     div[data-testid="stSidebar"] .stButton > button:hover {
-        background: #0369A1 !important;
+        background-color: #0284C7 !important;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover p,
+    div[data-testid="stSidebar"] .stButton > button:hover span {
+        color: #FFFFFF !important;
     }
 
     .sidebar-logo-card {
@@ -150,38 +154,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT JSON GVIZ LIVE CONNECTOR (NO PARSING LIBRARIES REQUIRED)
+# DIRECT REALTIME NO-CACHE GOOGLE SHEETS FETCH ENGINE
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
+GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
+PUB_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
 @st.cache_data(ttl=0)
-def fetch_live_json_matrix():
+def fetch_live_october_data():
+    ts = int(datetime.now().timestamp())
+    headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
+
+    # Attempt 1: Direct GVIZ Query targeted specifically to "OCTOBER 2026"
     try:
-        ts = int(datetime.now().timestamp())
-        res = requests.get(f"{GVIZ_JSON_URL}&_cb={ts}", timeout=8)
-        if res.status_code == 200:
-            # Extract JSON payload from Google Viz wrapper google.visualization.Query.setResponse(...)
-            match = re.search(r'google\.visualization\.Query\.setResponse\((.*)\);', res.text)
-            if match:
-                data = json.loads(match.group(1))
-                rows = data['table']['rows']
-                
-                parsed_table = []
-                for row in rows:
-                    row_vals = []
-                    for cell in row.get('c', []):
-                        if cell and 'v' in cell and cell['v'] is not None:
-                            row_vals.append(str(cell['v']))
-                        elif cell and 'f' in cell and cell['f'] is not None:
-                            row_vals.append(str(cell['f']))
-                        else:
-                            row_vals.append("")
-                    parsed_table.append(row_vals)
-                return parsed_table
+        res = requests.get(f"{GVIZ_URL}&_nocache={ts}", headers=headers, timeout=6)
+        if res.status_code == 200 and len(res.text) > 100:
+            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
-    return []
+
+    # Attempt 2: Direct Published CSV Stream
+    try:
+        res = requests.get(f"{PUB_URL}&_nocache={ts}", headers=headers, timeout=6)
+        if res.status_code == 200 and len(res.text) > 100:
+            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
+    except Exception:
+        pass
+
+    return pd.DataFrame()
 
 def normalize_string(s):
     return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
@@ -269,17 +269,17 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Direct JSON Array from Google Sheets
-    raw_matrix = fetch_live_json_matrix()
+    # Read Live Sheet Matrix
+    raw_df = fetch_live_october_data()
 
     today_display_list = []
 
     # Dynamic Column Index Search for 14-Oct
     today_col_idx = None
-    if raw_matrix:
-        for r_idx in range(min(15, len(raw_matrix))):
-            row_vals = [str(val).strip().lower() for val in raw_matrix[r_idx]]
-            for c_idx, cell in enumerate(row_vals):
+    if not raw_df.empty:
+        for r_idx in range(min(15, len(raw_df))):
+            row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
+            for c_idx, cell in enumerate(row_cells):
                 if f"{day_num}-oct" in cell or cell == day_num or "14-oct" in cell:
                     today_col_idx = c_idx
                     break
@@ -294,17 +294,17 @@ if view_mode == "📍 Today's Live Attendance":
         status_found = "🏢 ONSITE"
         remarks_found = "Onsite Duty / In Office"
 
-        if raw_matrix:
+        if not raw_df.empty:
             first_word = normalize_string(e_name.split()[0])
             last_word = normalize_string(e_name.split()[-1])
 
-            for row in raw_matrix:
-                row_raw_str = "".join([str(v) for v in row])
+            for r_idx in range(len(raw_df)):
+                row_raw_str = "".join([str(v) for v in raw_df.iloc[r_idx].values])
                 row_norm_str = normalize_string(row_raw_str)
 
                 if first_word in row_norm_str and last_word in row_norm_str:
-                    if today_col_idx is not None and today_col_idx < len(row):
-                        val = str(row[today_col_idx]).strip().upper()
+                    if today_col_idx is not None and today_col_idx < len(raw_df.columns):
+                        val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
 
                         if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
                             status_found = "❌ ABSENT"
@@ -385,7 +385,7 @@ if view_mode == "📍 Today's Live Attendance":
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
-    gsheet_iframe_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/htmlembed?widget=true&headers=false"
+    gsheet_iframe_url = f"https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&headers=false"
     
     st.components.v1.iframe(gsheet_iframe_url, height=680, scrolling=True)
 

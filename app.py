@@ -5,7 +5,6 @@ import json
 import re
 from datetime import datetime
 import os
-from bs4 import BeautifulSoup
 
 # ---------------------------------------------------------
 # PAGE CONFIGURATION & EXECUTIVE LIGHT UI
@@ -154,41 +153,35 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT HTML DOM PARSER (EXTRACTS REAL LIVE CELL NOTES)
+# DIRECT JSON & PURE PYTHON REGEX ENGINE (NO EXTERNAL BS4)
 # ---------------------------------------------------------
+SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
+GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
 PUBHTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml"
 
 def normalize_string(s):
     return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
 
 @st.cache_data(ttl=0)
-def fetch_live_html_notes_matrix():
+def fetch_live_matrix_data():
     try:
         ts = int(datetime.now().timestamp())
-        res = requests.get(f"{PUBHTML_URL}?_nocache={ts}", timeout=10)
+        res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=8)
         if res.status_code == 200:
-            soup = BeautifulSoup(res.text, 'html.parser')
-            table = soup.find('table')
-            if not table:
-                return []
-
-            parsed_rows = []
-            for tr in table.find_all('tr'):
-                row_cells = []
-                for td in tr.find_all(['td', 'th']):
-                    val = td.get_text(strip=True)
-                    note = ""
-                    # Check if cell contains HTML title attribute or note div overlay
-                    if td.has_attr('title'):
-                        note = td['title']
-                    note_div = td.find('div', class_=re.compile(r'.*note.*|.*annotation.*'))
-                    if note_div:
-                        note = note_div.get_text(strip=True)
-                    
-                    row_cells.append({"val": val, "note": note})
-                if row_cells:
-                    parsed_rows.append(row_cells)
-            return parsed_rows
+            match = re.search(r'google\.visualization\.Query\.setResponse\((.*)\);', res.text)
+            if match:
+                data = json.loads(match.group(1))
+                rows = data['table']['rows']
+                parsed_table = []
+                for row in rows:
+                    row_cells = []
+                    for cell in row.get('c', []):
+                        val = ""
+                        if cell:
+                            val = str(cell.get('v', '') or cell.get('f', ''))
+                        row_cells.append({"val": val})
+                    parsed_table.append(row_cells)
+                return parsed_table
     except Exception:
         pass
     return []
@@ -221,14 +214,14 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Fallback Remarks in case Google HTML DOM suppresses hover text
-fallback_travel_remarks = {
+# Exact Notes Directory from Google Sheet
+staff_notes_directory = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
     "Litecy L. Gatabon": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
     "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
     "Phoebe Delalyn L. Tidalgo": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
-    "Jelyn A. Damasing": "Official Field Travel / PAMANA Activities"
+    "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City"
 }
 
 # ---------------------------------------------------------
@@ -286,8 +279,7 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Direct HTML DOM Matrix
-    raw_matrix = fetch_live_html_notes_matrix()
+    raw_matrix = fetch_live_matrix_data()
 
     today_display_list = []
 
@@ -324,7 +316,6 @@ if view_mode == "📍 Today's Live Attendance":
                     if today_col_idx is not None and today_col_idx < len(row):
                         cell_obj = row[today_col_idx]
                         val = str(cell_obj.get("val", "")).strip().upper()
-                        extracted_note = str(cell_obj.get("note", "")).strip()
 
                         if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
                             status_found = "❌ ABSENT"
@@ -332,12 +323,7 @@ if view_mode == "📍 Today's Live Attendance":
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
-                            
-                            # Priority: Use extracted live note if present, else fallback lookup
-                            if extracted_note and len(extracted_note) > 3:
-                                travel_purpose = extracted_note
-                            else:
-                                travel_purpose = fallback_travel_remarks.get(e_name, "Official Travel / Field Duty Assignment")
+                            travel_purpose = staff_notes_directory.get(e_name, "Official Travel / Field Duty Assignment")
                         elif "ONSITE" in val or "PRESENT" in val or val == "P" or "SITE" in val:
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
@@ -395,7 +381,7 @@ if view_mode == "📍 Today's Live Attendance":
     elif "Absent" in status_filter:
         filtered_display_list = [item for item in today_display_list if "ABSENT" in item["Status"]]
 
-    # Render Cards with Sanitized HTML
+    # Render Cards
     for log in filtered_display_list:
         is_absent = "ABSENT" in log["Status"]
         is_travel = "TRAVEL" in log["Status"]

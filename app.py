@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & New Sidebar Theme Fix
+# Custom High-End Styling & Hover Effects
 st.markdown("""
     <style>
     .stApp {
@@ -108,7 +108,7 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* NEW EXECUTIVE LIGHT SIDEBAR STYLING */
+    /* EXECUTIVE LIGHT SLATE SIDEBAR STYLING */
     section[data-testid="stSidebar"] { 
         background: linear-gradient(180deg, #E2E8F0 0%, #F1F5F9 100%) !important; 
         border-right: 1px solid #CBD5E1 !important;
@@ -117,10 +117,10 @@ st.markdown("""
         color: #0F172A !important; 
     }
 
-    /* HIGH-CONTRAST REFRESH BUTTON WITH DARK ACCENT & WHITE BOLD TEXT */
+    /* REFRESH BUTTON HIGH-CONTRAST */
     div[data-testid="stSidebar"] .stButton > button {
-        background: linear-gradient(90deg, #1E3A8A, #0284C7) !important;
-        border: 1px solid #1E3A8A !important;
+        background: linear-gradient(90deg, #0284C7, #0369A1) !important;
+        border: 1px solid #0284C7 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
@@ -150,63 +150,51 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME GOOGLE SHEETS CONNECTOR (ZERO CACHE)
+# DIRECT REALTIME GOOGLE SHEETS LIVE PARSER (ZERO CACHE)
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
-PUB_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
 @st.cache_data(ttl=0)
-def fetch_gsheet_matrix():
-    # Stream 1: Direct GVIZ Query
+def fetch_gsheet_matrix_direct():
     try:
         ts = int(datetime.now().timestamp())
-        res = requests.get(f"{GVIZ_URL}&_ts={ts}", timeout=5)
+        res = requests.get(f"{GVIZ_URL}&_nocache={ts}", timeout=8)
         if res.status_code == 200 and len(res.text) > 50:
             return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
-
-    # Stream 2: Published Web CSV
-    try:
-        res = requests.get(PUB_URL, timeout=5)
-        if res.status_code == 200 and len(res.text) > 50:
-            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
-    except Exception:
-        pass
-
     return pd.DataFrame()
 
-# Helper function for flexible name normalization
 def normalize_string(s):
     return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
 
 # Official 24 Staff Roster
 official_roster = [
-    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
-    {"Name": "Aldrin B. Librero", "Position": "PDO IV", "BaseStatus": "❌ ABSENT", "BaseRemarks": "Official Leave / Absent"},
-    {"Name": "Sowad Repors Samporna", "Position": "SWO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Areej M. Balindong", "Position": "SWO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Litecy L. Gatabon", "Position": "FA III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
-    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
-    {"Name": "Stephen P. Celo", "Position": "PDO III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
-    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
-    {"Name": "Louie B. Idulsa", "Position": "ITO I", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Whilmar B. Porras", "Position": "TS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Jelyn A. Damasing", "Position": "PDO II", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
-    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Hezam M. Dubar", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "April Joy Y. Saburnido", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "King Mark B. Ponce", "Position": "PDO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Edmund Plastina", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
-    {"Name": "Lawrence R. Pichay", "Position": "ADAS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"}
+    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
+    {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
+    {"Name": "Sowad Repors Samporna", "Position": "SWO III"},
+    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III"},
+    {"Name": "Areej M. Balindong", "Position": "SWO III"},
+    {"Name": "Litecy L. Gatabon", "Position": "FA III"},
+    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III"},
+    {"Name": "Stephen P. Celo", "Position": "PDO III"},
+    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III"},
+    {"Name": "Louie B. Idulsa", "Position": "ITO I"},
+    {"Name": "Whilmar B. Porras", "Position": "TS II"},
+    {"Name": "Jelyn A. Damasing", "Position": "PDO II"},
+    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II"},
+    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II"},
+    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II"},
+    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II"},
+    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II"},
+    {"Name": "Hezam M. Dubar", "Position": "PDO II"},
+    {"Name": "April Joy Y. Saburnido", "Position": "PDO II"},
+    {"Name": "King Mark B. Ponce", "Position": "PDO III"},
+    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II"},
+    {"Name": "Edmund Plastina", "Position": "PDO II"},
+    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
+    {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
 # ---------------------------------------------------------
@@ -230,7 +218,6 @@ view_mode = st.sidebar.radio(
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-# HIGH CONTRAST REFRESH BUTTON
 if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
 
@@ -265,12 +252,12 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Live Sheet Matrix
-    raw_df = fetch_gsheet_matrix()
+    # Fetch Realtime Google Sheet Matrix
+    raw_df = fetch_gsheet_matrix_direct()
 
     today_display_list = []
 
-    # Detect Today Column (14-Oct)
+    # Dynamic Header Scanner: Locate 14-Oct
     today_col_idx = None
     if not raw_df.empty:
         for r_idx in range(min(15, len(raw_df))):
@@ -282,13 +269,13 @@ if view_mode == "📍 Today's Live Attendance":
             if today_col_idx is not None:
                 break
 
-    # Extract Status per Staff with Fuzzy Normalized Name Matching
+    # Parse Attendance Directly per Employee
     for emp in official_roster:
         e_name = emp["Name"]
         e_pos = emp["Position"]
         
-        status_found = emp["BaseStatus"]
-        remarks_found = emp["BaseRemarks"]
+        status_found = "🏢 ONSITE"
+        remarks_found = "Onsite Duty / In Office"
 
         if not raw_df.empty:
             first_word = normalize_string(e_name.split()[0])
@@ -321,13 +308,13 @@ if view_mode == "📍 Today's Live Attendance":
             "Remarks": remarks_found
         })
 
-    # Realtime Metric Counters
+    # Metric Counters
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
-    # 4 Executive Metric Cards
+    # 4 Metric Cards
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")
@@ -377,7 +364,7 @@ if view_mode == "📍 Today's Live Attendance":
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 2: MONTHLY HISTORICAL REVIEW (LIVE MATRIX VIEWER)
+# VIEW 2: MONTHLY HISTORICAL REVIEW
 # ---------------------------------------------------------
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")

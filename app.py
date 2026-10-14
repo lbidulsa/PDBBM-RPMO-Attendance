@@ -111,25 +111,28 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* ABSOLUTE STREAMLIT BUTTON OVERRIDE (FORCED HIGH CONTRAST DARK TEXT) */
-    div[data-testid="stSidebar"] div.stButton > button {
-        background-color: #38BDF8 !important;
-        border: 2px solid #0284C7 !important;
+    /* SIDEBAR REFRESH BUTTON CONTRAST OVERRIDE */
+    .sidebar-btn-container {
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+    
+    div[data-testid="stSidebar"] button {
+        background-color: #0284C7 !important;
+        border: 1px solid #38BDF8 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4) !important;
     }
-    div[data-testid="stSidebar"] div.stButton > button * {
-        color: #0F172A !important;
+    div[data-testid="stSidebar"] button p,
+    div[data-testid="stSidebar"] button span,
+    div[data-testid="stSidebar"] button div {
+        color: #FFFFFF !important;
         font-weight: 900 !important;
         font-size: 15px !important;
     }
-    div[data-testid="stSidebar"] div.stButton > button:hover {
-        background-color: #0284C7 !important;
-    }
-    div[data-testid="stSidebar"] div.stButton > button:hover * {
-        color: #FFFFFF !important;
+    div[data-testid="stSidebar"] button:hover {
+        background-color: #0369A1 !important;
     }
 
     .sidebar-logo-card {
@@ -144,30 +147,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME GOOGLE SHEETS LIVE TAB CONNECTOR
+# DIRECT NO-CACHE GOOGLE SHEETS LIVE CONNECTOR
 # ---------------------------------------------------------
-# Targeted directly to OCTOBER 2026 sheet tab to prevent defaulting to April tab
-GSHEET_TARGET_OCTOBER = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
-GSHEET_PUB_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
+# Accessing directly via Google Sheet Query API to bypass publish cache delay
+SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
+GVIZ_LIVE_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
 
-@st.cache_data(ttl=0) # Zero Latency Direct Fetch
-def load_live_csv():
-    # Attempt 1: Fetch October Tab directly
+@st.cache_data(ttl=0) # Zero caching
+def load_direct_gsheet_live():
     try:
-        req = requests.get(GSHEET_TARGET_OCTOBER, timeout=6)
-        if req.status_code == 200 and len(req.content) > 100:
+        # Add timestamp parameter to force bypass any proxy/browser cache
+        timestamp_url = f"{GVIZ_LIVE_URL}&_ts={int(datetime.now().timestamp())}"
+        req = requests.get(timestamp_url, timeout=5)
+        if req.status_code == 200:
             return pd.read_csv(io.StringIO(req.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
-
-    # Attempt 2: Fetch Published Web Link
-    try:
-        req = requests.get(GSHEET_PUB_CSV, timeout=6)
-        if req.status_code == 200 and len(req.content) > 100:
-            return pd.read_csv(io.StringIO(req.text), header=None, dtype=str).fillna("")
-    except Exception:
-        pass
-
     return pd.DataFrame()
 
 # Official 24 RPMO Staff Roster
@@ -217,12 +212,13 @@ view_mode = st.sidebar.radio(
     ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"]
 )
 
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-btn-container">', unsafe_allow_html=True)
 if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
+st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -252,13 +248,13 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Live Matrix
-    raw_df = load_live_csv()
+    # Read Direct Live Matrix
+    raw_df = load_direct_gsheet_live()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Step 1: Search top 15 rows for exact 14-Oct date header
+        # Step 1: Search top 15 rows for 14-Oct column index
         today_col_idx = None
         for r_idx in range(min(15, len(raw_df))):
             row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
@@ -305,7 +301,7 @@ if view_mode == "📍 Today's Live Attendance":
                 "Remarks": remarks_found
             })
     else:
-        # Fallback if connection fails
+        # Direct Mapping Backup
         today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
 
     # Realtime Metric Counters
@@ -369,7 +365,7 @@ if view_mode == "📍 Today's Live Attendance":
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
-    gsheet_iframe_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&amp;headers=false"
+    gsheet_iframe_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/htmlembed?widget=true&headers=false"
     
     st.components.v1.iframe(gsheet_iframe_url, height=680, scrolling=True)
 
@@ -378,7 +374,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #64748B; padding-bottom: 20px;">
-        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Realtime Published Sheet Engine<br>
+        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Realtime Live Engine<br>
         Designed & Developed by <b>LOUIE B. IDULSA - PDBBM ITO I</b> • DSWD Field Office X
     </div>
     """, 

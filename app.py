@@ -167,7 +167,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT LIVE JSON GVIZ PARSER (ZERO MODULE DEPENDENCY)
+# DIRECT LIVE JSON GVIZ PARSER
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
@@ -227,13 +227,13 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Verified Exact Notes Directory
+# Verified Exact Individual Notes Directory
 staff_notes_directory = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
     "Litecy L. Gatabon": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
-    "Phoebe Delalyn L. Tidalgo": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
+    "Phoebe Delalyn L. Tidalgo": "Official Field Travel / Project Monitoring & Assessment",
     "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City"
 }
 

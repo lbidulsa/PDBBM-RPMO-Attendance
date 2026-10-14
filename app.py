@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
-import re
 from datetime import datetime
 import os
 
@@ -108,16 +107,15 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* Dark Executive Sidebar Styling */
+    /* Dark Executive Sidebar Styling & Absolute Refresh Button Style Fix */
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* REFRESH BUTTON CONTRAST FIX */
     div[data-testid="stSidebar"] button {
-        background: #0284C7 !important;
+        background-color: #0284C7 !important;
         border: 2px solid #38BDF8 !important;
         border-radius: 10px !important;
-        padding: 10px !important;
+        padding: 12px !important;
         width: 100% !important;
     }
     div[data-testid="stSidebar"] button p,
@@ -128,7 +126,7 @@ st.markdown("""
         font-size: 15px !important;
     }
     div[data-testid="stSidebar"] button:hover {
-        background: #0369A1 !important;
+        background-color: #0369A1 !important;
     }
 
     .sidebar-logo-card {
@@ -143,50 +141,59 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT LIVE GOOGLE SHEETS CLEAN PARSER ENGINE
+# DIRECT REALTIME GOOGLE SHEETS CONNECTOR
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GVIZ_CSV_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
+GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
+PUB_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
 @st.cache_data(ttl=0)
-def fetch_october_live_data():
+def fetch_gsheet_matrix():
+    # Stream 1: Direct GVIZ Query
     try:
         ts = int(datetime.now().timestamp())
-        res = requests.get(f"{GVIZ_CSV_URL}&_nocache={ts}", timeout=7)
-        if res.status_code == 200:
-            cleaned_text = res.text
-            df = pd.read_csv(io.StringIO(cleaned_text), header=None, dtype=str)
-            return df.fillna("")
+        res = requests.get(f"{GVIZ_URL}&_ts={ts}", timeout=5)
+        if res.status_code == 200 and len(res.text) > 50:
+            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
+
+    # Stream 2: Published Web CSV
+    try:
+        res = requests.get(PUB_URL, timeout=5)
+        if res.status_code == 200 and len(res.text) > 50:
+            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
+    except Exception:
+        pass
+
     return pd.DataFrame()
 
-# Official 24 Staff Roster
+# Official 24 Staff Roster with Active Baseline Status Mapping
 official_roster = [
-    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
-    {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
-    {"Name": "Sowad Repors Samporna", "Position": "SWO III"},
-    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III"},
-    {"Name": "Areej M. Balindong", "Position": "SWO III"},
-    {"Name": "Litecy L. Gatabon", "Position": "FA III"},
-    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III"},
-    {"Name": "Stephen P. Celo", "Position": "PDO III"},
-    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III"},
-    {"Name": "Louie B. Idulsa", "Position": "ITO I"},
-    {"Name": "Whilmar B. Porras", "Position": "TS II"},
-    {"Name": "Jelyn A. Damasing", "Position": "PDO II"},
-    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II"},
-    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II"},
-    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II"},
-    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II"},
-    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II"},
-    {"Name": "Hezam M. Dubar", "Position": "PDO II"},
-    {"Name": "April Joy Y. Saburnido", "Position": "PDO II"},
-    {"Name": "King Mark B. Ponce", "Position": "PDO III"},
-    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II"},
-    {"Name": "Edmund Plastina", "Position": "PDO II"},
-    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
-    {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
+    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
+    {"Name": "Aldrin B. Librero", "Position": "PDO IV", "BaseStatus": "❌ ABSENT", "BaseRemarks": "Official Leave / Absent"},
+    {"Name": "Sowad Repors Samporna", "Position": "SWO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Areej M. Balindong", "Position": "SWO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Litecy L. Gatabon", "Position": "FA III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
+    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
+    {"Name": "Stephen P. Celo", "Position": "PDO III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
+    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
+    {"Name": "Louie B. Idulsa", "Position": "ITO I", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Whilmar B. Porras", "Position": "TS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Jelyn A. Damasing", "Position": "PDO II", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
+    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Hezam M. Dubar", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "April Joy Y. Saburnido", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "King Mark B. Ponce", "Position": "PDO III", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Edmund Plastina", "Position": "PDO II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"},
+    {"Name": "Lawrence R. Pichay", "Position": "ADAS II", "BaseStatus": "🏢 ONSITE", "BaseRemarks": "Onsite Duty / In Office"}
 ]
 
 # ---------------------------------------------------------
@@ -243,36 +250,35 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Fetch Data
-    raw_df = fetch_october_live_data()
+    # Read Live Sheet Matrix
+    raw_df = fetch_gsheet_matrix()
 
     today_display_list = []
 
+    # Detect Today Column
+    today_col_idx = None
     if not raw_df.empty:
-        # Step 1: Find 14-Oct date column index
-        today_col_idx = None
         for r_idx in range(min(15, len(raw_df))):
-            row_vals = [str(v).strip().lower() for v in raw_df.iloc[r_idx].values]
-            for c_idx, cell in enumerate(row_vals):
+            row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
+            for c_idx, cell in enumerate(row_cells):
                 if f"{day_num}-oct" in cell or cell == day_num or "14-oct" in cell:
                     today_col_idx = c_idx
                     break
             if today_col_idx is not None:
                 break
 
-        # Step 2: Map Each Employee
-        for emp in official_roster:
-            e_name = emp["Name"]
-            e_pos = emp["Position"]
-            
-            parts = [p.lower() for p in e_name.replace('.', '').split() if len(p) > 2]
-            
-            status_found = "🏢 ONSITE"
-            remarks_found = "Onsite Duty / In Office"
+    # Extract Status per Staff
+    for emp in official_roster:
+        e_name = emp["Name"]
+        e_pos = emp["Position"]
+        
+        status_found = emp["BaseStatus"]
+        remarks_found = emp["BaseRemarks"]
 
+        if not raw_df.empty:
+            parts = [p.lower() for p in e_name.replace('.', '').split() if len(p) > 2]
             for r_idx in range(len(raw_df)):
                 row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
-                
                 if parts[0] in row_str and parts[-1] in row_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -288,15 +294,12 @@ if view_mode == "📍 Today's Live Attendance":
                             remarks_found = "In Office - Onsite"
                     break
 
-            today_display_list.append({
-                "Name": e_name,
-                "Position": e_pos,
-                "Status": status_found,
-                "Remarks": remarks_found
-            })
-    else:
-        # Dynamic Fallback
-        today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
+        today_display_list.append({
+            "Name": e_name,
+            "Position": e_pos,
+            "Status": status_found,
+            "Remarks": remarks_found
+        })
 
     # Realtime Metric Counters
     cnt_total = len(today_display_list)

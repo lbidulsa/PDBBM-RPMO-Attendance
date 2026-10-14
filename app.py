@@ -5,6 +5,7 @@ import json
 import re
 from datetime import datetime
 import os
+from bs4 import BeautifulSoup
 
 # ---------------------------------------------------------
 # PAGE CONFIGURATION & EXECUTIVE LIGHT UI
@@ -153,39 +154,44 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT JSON GVIZ LIVE PARSER
+# DIRECT HTML DOM PARSER (EXTRACTS REAL LIVE CELL NOTES)
 # ---------------------------------------------------------
-SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
-
-@st.cache_data(ttl=0)
-def fetch_live_json_with_comments():
-    try:
-        ts = int(datetime.now().timestamp())
-        res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=8)
-        if res.status_code == 200:
-            match = re.search(r'google\.visualization\.Query\.setResponse\((.*)\);', res.text)
-            if match:
-                data = json.loads(match.group(1))
-                rows = data['table']['rows']
-                
-                parsed_table = []
-                for row in rows:
-                    row_cells = []
-                    for cell in row.get('c', []):
-                        val = ""
-                        note = ""
-                        if cell:
-                            val = str(cell.get('v', '') or cell.get('f', ''))
-                        row_cells.append({"val": val, "note": note})
-                    parsed_table.append(row_cells)
-                return parsed_table
-    except Exception:
-        pass
-    return []
+PUBHTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml"
 
 def normalize_string(s):
     return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
+
+@st.cache_data(ttl=0)
+def fetch_live_html_notes_matrix():
+    try:
+        ts = int(datetime.now().timestamp())
+        res = requests.get(f"{PUBHTML_URL}?_nocache={ts}", timeout=10)
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            table = soup.find('table')
+            if not table:
+                return []
+
+            parsed_rows = []
+            for tr in table.find_all('tr'):
+                row_cells = []
+                for td in tr.find_all(['td', 'th']):
+                    val = td.get_text(strip=True)
+                    note = ""
+                    # Check if cell contains HTML title attribute or note div overlay
+                    if td.has_attr('title'):
+                        note = td['title']
+                    note_div = td.find('div', class_=re.compile(r'.*note.*|.*annotation.*'))
+                    if note_div:
+                        note = note_div.get_text(strip=True)
+                    
+                    row_cells.append({"val": val, "note": note})
+                if row_cells:
+                    parsed_rows.append(row_cells)
+            return parsed_rows
+    except Exception:
+        pass
+    return []
 
 # Official 24 Staff Roster
 official_roster = [
@@ -215,14 +221,14 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Realtime Notes Lookup for Official Travel Staff
-travel_remarks_lookup = {
+# Fallback Remarks in case Google HTML DOM suppresses hover text
+fallback_travel_remarks = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
-    "Litecy L. Gatabon": "Official Field Travel / Financial Monitoring",
-    "Dharyl James L. Waniwan": "Official Travel / Field Work & PAMANA Activity",
-    "Stephen P. Celo": "Official Travel / Field Work & PAMANA Activity",
-    "Phoebe Delalyn L. Tidalgo": "Official Travel / Field Work & PAMANA Activity",
-    "Jelyn A. Damasing": "Official Travel / Field Work"
+    "Litecy L. Gatabon": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
+    "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
+    "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
+    "Phoebe Delalyn L. Tidalgo": "PAMANA CDPD Film for the KALINAW Awards 2026 & Technical Sessions @Oroquieta City",
+    "Jelyn A. Damasing": "Official Field Travel / PAMANA Activities"
 }
 
 # ---------------------------------------------------------
@@ -280,8 +286,8 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Direct JSON Table
-    raw_matrix = fetch_live_json_with_comments()
+    # Read Direct HTML DOM Matrix
+    raw_matrix = fetch_live_html_notes_matrix()
 
     today_display_list = []
 
@@ -316,7 +322,9 @@ if view_mode == "📍 Today's Live Attendance":
 
                 if first_word in row_norm_str and last_word in row_norm_str:
                     if today_col_idx is not None and today_col_idx < len(row):
-                        val = str(row[today_col_idx].get("val", "")).strip().upper()
+                        cell_obj = row[today_col_idx]
+                        val = str(cell_obj.get("val", "")).strip().upper()
+                        extracted_note = str(cell_obj.get("note", "")).strip()
 
                         if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
                             status_found = "❌ ABSENT"
@@ -324,7 +332,12 @@ if view_mode == "📍 Today's Live Attendance":
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
-                            travel_purpose = travel_remarks_lookup.get(e_name, "Official Travel / Field Duty")
+                            
+                            # Priority: Use extracted live note if present, else fallback lookup
+                            if extracted_note and len(extracted_note) > 3:
+                                travel_purpose = extracted_note
+                            else:
+                                travel_purpose = fallback_travel_remarks.get(e_name, "Official Travel / Field Duty Assignment")
                         elif "ONSITE" in val or "PRESENT" in val or val == "P" or "SITE" in val:
                             status_found = "🏢 ONSITE"
                             remarks_found = "In Office - Onsite"
@@ -361,7 +374,7 @@ if view_mode == "📍 Today's Live Attendance":
             st.markdown(f"❌ **{ab['Name']}** ({ab['Position']}) — *Status: {ab['Remarks']}*")
         st.markdown("<br>", unsafe_allow_html=True)
 
-    # DROPDOWN FILTER FOR ONSITE, TRAVEL, AND ABSENT
+    # DROPDOWN FILTER
     st.markdown("#### 👤 Individual Staff Status Cards:")
     
     col_filter, _ = st.columns([2, 2])

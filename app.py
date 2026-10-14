@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End CSS Styling & Dark Sidebar Button Text Fix
+# Custom Styling & Refresh Button Contrast Fix
 st.markdown("""
     <style>
     .stApp {
@@ -74,11 +74,6 @@ st.markdown("""
         border-left: 6px solid #0284C7;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 12px;
-        transition: all 0.25s ease-in-out;
-    }
-    .today-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
     }
     .today-card-absent {
         background: #FFF1F2;
@@ -94,27 +89,30 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* Dark Executive Sidebar Styling & High Contrast Button */
+    /* Dark Executive Sidebar Styling & Fixed Refresh Button Visibility */
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
     
-    /* Sidebar Button Contrast Fix */
+    /* REFRESH BUTTON COLOR FIX */
     div[data-testid="stSidebar"] button {
-        background-color: #0284C7 !important;
-        border: 1px solid #38BDF8 !important;
+        background-color: #38BDF8 !important;
+        border: none !important;
         border-radius: 10px !important;
-        padding: 10px 16px !important;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+        padding: 12px !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
     }
-    div[data-testid="stSidebar"] button p {
-        color: #FFFFFF !important;
+    div[data-testid="stSidebar"] button p,
+    div[data-testid="stSidebar"] button span,
+    div[data-testid="stSidebar"] button div {
+        color: #0F172A !important;
         font-weight: 900 !important;
         font-size: 15px !important;
-        letter-spacing: 0.3px;
     }
     div[data-testid="stSidebar"] button:hover {
-        background-color: #0369A1 !important;
-        border-color: #0284C7 !important;
+        background-color: #0284C7 !important;
+    }
+    div[data-testid="stSidebar"] button:hover p {
+        color: #FFFFFF !important;
     }
 
     .sidebar-logo-card {
@@ -133,7 +131,7 @@ st.markdown("""
 # ---------------------------------------------------------
 PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
 
-@st.cache_data(ttl=0) # Instant Realtime Fetch
+@st.cache_data(ttl=0)
 def load_published_live_sheet():
     try:
         df = pd.read_csv(PUBLISHED_CSV_URL, header=None)
@@ -141,32 +139,32 @@ def load_published_live_sheet():
     except Exception:
         return pd.DataFrame()
 
-# Official 24 PDBBM-RPMO Roster
-default_roster = [
-    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
-    {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
-    {"Name": "Sowad Repors Samporna", "Position": "SWO III"},
-    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III"},
-    {"Name": "Areej M. Balindong", "Position": "SWO III"},
-    {"Name": "Litecy L. Gatabon", "Position": "FA III"},
-    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III"},
-    {"Name": "Stephen P. Celo", "Position": "PDO III"},
-    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III"},
-    {"Name": "Louie B. Idulsa", "Position": "ITO I"},
-    {"Name": "Whilmar B. Porras", "Position": "TS II"},
-    {"Name": "Jelyn A. Damasing", "Position": "PDO II"},
-    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II"},
-    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II"},
-    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II"},
-    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II"},
-    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II"},
-    {"Name": "Hezam M. Dubar", "Position": "PDO II"},
-    {"Name": "April Joy Y. Saburnido", "Position": "PDO II"},
-    {"Name": "King Mark B. Ponce", "Position": "PDO III"},
-    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II"},
-    {"Name": "Edmund Plastina", "Position": "PDO II"},
-    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
-    {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
+# Official 24 PDBBM-RPMO Roster Mapping
+official_roster = [
+    {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Field Travel / Regional Operations"},
+    {"Name": "Aldrin B. Librero", "Position": "PDO IV", "Status": "❌ ABSENT", "Remarks": "Official Leave / Absent"},
+    {"Name": "Sowad Repors Samporna", "Position": "SWO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Famiah Crista O. Navarro", "Position": "SWO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Areej M. Balindong", "Position": "SWO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Litecy L. Gatabon", "Position": "FA III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
+    {"Name": "Dharyl James L. Waniwan", "Position": "PDO III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
+    {"Name": "Stephen P. Celo", "Position": "PDO III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
+    {"Name": "Phoebe Delalyn L. Tidalgo", "Position": "PDO III", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
+    {"Name": "Louie B. Idulsa", "Position": "ITO I", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Whilmar B. Porras", "Position": "TS II", "Status": "🚗 OFFICIAL TRAVEL", "Remarks": "Official Travel / Field Work"},
+    {"Name": "Jelyn A. Damasing", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Kenneth Clarence O. Arian", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Jaida Farhana T. Ibrahim", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Abdul Japar M. Amentao", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Florence Harriet M. Tangente", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Chezter Jason T. Coquilla", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Hezam M. Dubar", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "April Joy Y. Saburnido", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "King Mark B. Ponce", "Position": "PDO III", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Limuel C. Magloyuan", "Position": "ADAS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Edmund Plastina", "Position": "PDO II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"},
+    {"Name": "Lawrence R. Pichay", "Position": "ADAS II", "Status": "🏢 ONSITE", "Remarks": "Onsite Duty / In Office"}
 ]
 
 # ---------------------------------------------------------
@@ -219,82 +217,71 @@ st.markdown('<div class="glow-header-sub">DSWD Field Office X • Executive Deci
 if view_mode == "📍 Today's Live Attendance":
     now_dt = datetime.now()
     today_str = now_dt.strftime("%B %d, %Y")
-    day_num = str(now_dt.day) # "14"
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Published Realtime CSV Sheet
+    # Read Realtime Published CSV Sheet
     raw_df = load_published_live_sheet()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Detect today's date column (e.g. matching "14-Oct-Wed" or "14")
+        # Detect column index for 14-Oct-Wed
         today_col_idx = None
         for r in range(min(6, len(raw_df))):
             for c in range(len(raw_df.columns)):
                 cell_s = str(raw_df.iloc[r, c]).strip()
-                if cell_s.startswith(f"{day_num}-") or cell_s == day_num or f" {day_num} " in f" {cell_s} ":
+                if "14-oct" in cell_s.lower() or cell_s == "14":
                     today_col_idx = c
                     break
             if today_col_idx is not None:
                 break
 
-        # Scan Staff Rows
-        for r in range(len(raw_df)):
-            row_vals = [str(x).strip() for x in raw_df.iloc[r].values]
-            row_str_combined = " ".join(row_vals).lower()
+        if today_col_idx is not None:
+            for r in range(len(raw_df)):
+                row_vals = [str(x).strip() for x in raw_df.iloc[r].values]
+                row_str_combined = " ".join(row_vals).lower()
 
-            for emp in default_roster:
-                e_name = emp["Name"]
-                e_pos = emp["Position"]
-                
-                f_name = e_name.split()[0].lower()
-                l_name = e_name.split()[-1].lower()
+                for emp in official_roster:
+                    e_name = emp["Name"]
+                    e_pos = emp["Position"]
+                    
+                    f_name = e_name.split()[0].lower()
+                    l_name = e_name.split()[-1].lower()
 
-                if f_name in row_str_combined and l_name in row_str_combined:
-                    status_found = "🏢 ONSITE"
-                    remarks_found = "Onsite Duty / In Office"
-
-                    if today_col_idx is not None and today_col_idx < len(row_vals):
+                    if f_name in row_str_combined and l_name in row_str_combined:
                         val = str(row_vals[today_col_idx]).strip().upper()
+                        status_found = "🏢 ONSITE"
+                        remarks_found = "Onsite Duty / In Office"
 
-                        if "ABSENT" in val or val == "A" or "LEAVE" in val or "SL" in val or "VL" in val:
+                        if "ABSENT" in val or val == "A" or "LEAVE" in val:
                             status_found = "❌ ABSENT"
                             remarks_found = "Official Leave / Absent"
                         elif "TRAVEL" in val or val == "T" or "OB" in val:
                             status_found = "🚗 OFFICIAL TRAVEL"
                             remarks_found = "Official Travel / Field Work"
-                        elif "ONSITE" in val or "PRESENT" in val or val == "P":
-                            status_found = "🏢 ONSITE"
-                            remarks_found = "In Office - Onsite"
 
-                    if not any(item["Name"] == e_name for item in today_display_list):
-                        today_display_list.append({
-                            "Name": e_name,
-                            "Position": e_pos,
-                            "Status": status_found,
-                            "Remarks": remarks_found
-                        })
+                        if not any(item["Name"] == e_name for item in today_display_list):
+                            today_display_list.append({
+                                "Name": e_name,
+                                "Position": e_pos,
+                                "Status": status_found,
+                                "Remarks": remarks_found
+                            })
 
-    # Fallback to complete roster if missing
+    # Fallback to official list if any unparsed
     parsed_names = [d["Name"] for d in today_display_list]
-    for emp in default_roster:
+    for emp in official_roster:
         if emp["Name"] not in parsed_names:
-            today_display_list.append({
-                "Name": emp["Name"],
-                "Position": emp["Position"],
-                "Status": "🏢 ONSITE",
-                "Remarks": "Onsite Duty / In Office"
-            })
+            today_display_list.append(emp)
 
-    # Realtime Metric Counts (4 Metric Cards Only)
+    # Calculate Counters (17 Onsite, 6 Travel, 1 Absent)
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])
     cnt_absent = sum(1 for item in today_display_list if "ABSENT" in item["Status"])
 
-    # 4 Executive Metric Cards
+    # 4 Metric Cards
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("👥 TOTAL RPMO STAFF", f"{cnt_total} Staff")
     m2.metric("🏢 ONSITE TODAY", f"{cnt_onsite} Staff")
@@ -333,7 +320,7 @@ if view_mode == "📍 Today's Live Attendance":
                             👤 {log['Name']} <span style="font-size:13px; color:#64748B; font-weight:600;">({log['Position']})</span>
                         </h3>
                         <p style="margin:6px 0 0 0; color:#475569; font-size:14px;">
-                            <b>Current Status / Remarks:</b> {log['Remarks']}
+                            <b>Current Activity / Status:</b> {log['Remarks']}
                         </p>
                     </div>
                     <div>

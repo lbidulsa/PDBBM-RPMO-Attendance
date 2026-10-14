@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
+import re
 from datetime import datetime
 import os
 
@@ -107,26 +108,32 @@ st.markdown("""
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
 
-    /* Dark Executive Sidebar Styling & Absolute Refresh Button Style Fix */
+    /* Dark Executive Sidebar Styling & Absolute Refresh Button Style Override */
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    div[data-testid="stSidebar"] button {
-        background-color: #0284C7 !important;
-        border: 2px solid #38BDF8 !important;
+    /* HIGH-CONTRAST REFRESH BUTTON WITH DARK BLUE TEXT ON SKY BLUE BUTTON */
+    div[data-testid="stSidebar"] .stButton > button {
+        background-color: #38BDF8 !important;
+        border: 2px solid #0284C7 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
     }
-    div[data-testid="stSidebar"] button p,
-    div[data-testid="stSidebar"] button span,
-    div[data-testid="stSidebar"] button div {
-        color: #FFFFFF !important;
+    div[data-testid="stSidebar"] .stButton > button p,
+    div[data-testid="stSidebar"] .stButton > button span,
+    div[data-testid="stSidebar"] .stButton > button div {
+        color: #0F172A !important;
         font-weight: 900 !important;
         font-size: 15px !important;
     }
-    div[data-testid="stSidebar"] button:hover {
-        background-color: #0369A1 !important;
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #0284C7 !important;
+    }
+    div[data-testid="stSidebar"] .stButton > button:hover p,
+    div[data-testid="stSidebar"] .stButton > button:hover span {
+        color: #FFFFFF !important;
     }
 
     .sidebar-logo-card {
@@ -141,7 +148,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT REALTIME GOOGLE SHEETS CONNECTOR
+# DIRECT REALTIME GOOGLE SHEETS CONNECTOR (ZERO CACHE)
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
@@ -168,7 +175,11 @@ def fetch_gsheet_matrix():
 
     return pd.DataFrame()
 
-# Official 24 Staff Roster with Active Baseline Status Mapping
+# Helper function for flexible name normalization
+def normalize_string(s):
+    return re.sub(r'[^a-zA-Z0-9]', '', str(s)).lower()
+
+# Official 24 Staff Roster
 official_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV", "BaseStatus": "🚗 OFFICIAL TRAVEL", "BaseRemarks": "Official Travel / Field Work"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV", "BaseStatus": "❌ ABSENT", "BaseRemarks": "Official Leave / Absent"},
@@ -216,6 +227,8 @@ view_mode = st.sidebar.radio(
 )
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
+# HIGH CONTRAST REFRESH BUTTON WITH FORCED VISIBILITY
 if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
 
@@ -255,7 +268,7 @@ if view_mode == "📍 Today's Live Attendance":
 
     today_display_list = []
 
-    # Detect Today Column
+    # Detect Today Column (14-Oct)
     today_col_idx = None
     if not raw_df.empty:
         for r_idx in range(min(15, len(raw_df))):
@@ -267,7 +280,7 @@ if view_mode == "📍 Today's Live Attendance":
             if today_col_idx is not None:
                 break
 
-    # Extract Status per Staff
+    # Extract Status per Staff with Fuzzy Normalized Name Matching
     for emp in official_roster:
         e_name = emp["Name"]
         e_pos = emp["Position"]
@@ -276,10 +289,16 @@ if view_mode == "📍 Today's Live Attendance":
         remarks_found = emp["BaseRemarks"]
 
         if not raw_df.empty:
-            parts = [p.lower() for p in e_name.replace('.', '').split() if len(p) > 2]
+            norm_target_name = normalize_string(e_name)
+            first_word = normalize_string(e_name.split()[0])
+            last_word = normalize_string(e_name.split()[-1])
+
             for r_idx in range(len(raw_df)):
-                row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
-                if parts[0] in row_str and parts[-1] in row_str:
+                row_raw_str = "".join([str(v) for v in raw_df.iloc[r_idx].values])
+                row_norm_str = normalize_string(row_raw_str)
+
+                # Matching via first and last name tokens regardless of spaces
+                if first_word in row_norm_str and last_word in row_norm_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
 

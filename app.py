@@ -227,13 +227,13 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"}
 ]
 
-# Verified Exact Individual Notes Directory
+# Verified Exact Individual Notes Directory (Including Phoebe Delalyn L. Tidalgo)
 staff_notes_directory = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
     "Litecy L. Gatabon": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Dharyl James L. Waniwan": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
     "Stephen P. Celo": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City",
-    "Phoebe Delalyn L. Tidalgo": "Official Field Travel / Project Monitoring & Assessment",
+    "Phoebe Delalyn L. Tidalgo": "Provision of Technical Assistance to Lanao del Norte PAMANA LGU-led staff on Proper SLPA Turn-over to LGU Lanao del Norte Areas and SLPA Livelihood Assessment @LDN",
     "Jelyn A. Damasing": "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical session in preparation for the RFR documents, in support of the target obligation for the implementation of PAMANA CDPD in the 10 barangays of Oroquieta City @Oroquieta City"
 }
 

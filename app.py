@@ -150,32 +150,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT DUAL-STREAM GOOGLE SHEETS LIVE CONNECTOR
+# DIRECT REALTIME HTML TABLE PARSER (BYPASSES CSV MERGE ERRORS)
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GVIZ_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
-PUB_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
+PUBHTML_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/pubhtml"
 
 @st.cache_data(ttl=0)
-def fetch_robust_gsheet_matrix():
-    ts = int(datetime.now().timestamp())
-    
-    # Primary Attempt: GVIZ Query
+def fetch_live_html_tables():
     try:
-        res = requests.get(f"{GVIZ_URL}&_cb={ts}", timeout=6)
-        if res.status_code == 200 and len(res.text) > 100:
-            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
+        ts = int(datetime.now().timestamp())
+        req = requests.get(f"{PUBHTML_URL}?_ts={ts}", timeout=8)
+        if req.status_code == 200:
+            tables = pd.read_html(req.text)
+            if tables:
+                return tables[0].fillna("")
     except Exception:
         pass
-
-    # Secondary Backup Stream: Published CSV
-    try:
-        res = requests.get(f"{PUB_CSV_URL}&_cb={ts}", timeout=6)
-        if res.status_code == 200 and len(res.text) > 100:
-            return pd.read_csv(io.StringIO(res.text), header=None, dtype=str).fillna("")
-    except Exception:
-        pass
-
     return pd.DataFrame()
 
 def normalize_string(s):
@@ -264,12 +254,12 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Fetch Realtime Google Sheet Data
-    raw_df = fetch_robust_gsheet_matrix()
+    # Fetch Realtime Google Sheet Table
+    raw_df = fetch_live_html_tables()
 
     today_display_list = []
 
-    # Dynamic Column Index Detector (Checking top 15 rows for '14-Oct' or '14')
+    # Dynamic Header Finder (Scanning for 14-Oct)
     today_col_idx = None
     if not raw_df.empty:
         for r_idx in range(min(15, len(raw_df))):
@@ -286,7 +276,6 @@ if view_mode == "📍 Today's Live Attendance":
         e_name = emp["Name"]
         e_pos = emp["Position"]
         
-        # Default status if not matched
         status_found = "🏢 ONSITE"
         remarks_found = "Onsite Duty / In Office"
 
@@ -298,7 +287,6 @@ if view_mode == "📍 Today's Live Attendance":
                 row_raw_str = "".join([str(v) for v in raw_df.iloc[r_idx].values])
                 row_norm_str = normalize_string(row_raw_str)
 
-                # Token match
                 if first_word in row_norm_str and last_word in row_norm_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -321,7 +309,7 @@ if view_mode == "📍 Today's Live Attendance":
             "Remarks": remarks_found
         })
 
-    # Counters
+    # Metric Counters
     cnt_total = len(today_display_list)
     cnt_onsite = sum(1 for item in today_display_list if "ONSITE" in item["Status"])
     cnt_travel = sum(1 for item in today_display_list if "TRAVEL" in item["Status"])

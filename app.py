@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-End Styling & Hover Effects
+# Custom High-End Styling & Explicit Button Overrides
 st.markdown("""
     <style>
     .stApp {
@@ -111,28 +111,28 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #0F172A !important; }
     section[data-testid="stSidebar"] * { color: #F8FAFC !important; }
 
-    /* SIDEBAR REFRESH BUTTON CONTRAST OVERRIDE */
-    .sidebar-btn-container {
-        margin-top: 10px;
-        margin-bottom: 15px;
-    }
-    
+    /* HIGH CONTRAST REFRESH BUTTON FIX */
     div[data-testid="stSidebar"] button {
-        background-color: #0284C7 !important;
-        border: 1px solid #38BDF8 !important;
+        background-color: #38BDF8 !important;
+        border: 2px solid #0284C7 !important;
         border-radius: 10px !important;
         padding: 12px !important;
         width: 100% !important;
+        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4) !important;
     }
     div[data-testid="stSidebar"] button p,
     div[data-testid="stSidebar"] button span,
     div[data-testid="stSidebar"] button div {
-        color: #FFFFFF !important;
+        color: #0F172A !important;
         font-weight: 900 !important;
         font-size: 15px !important;
     }
     div[data-testid="stSidebar"] button:hover {
-        background-color: #0369A1 !important;
+        background-color: #0284C7 !important;
+    }
+    div[data-testid="stSidebar"] button:hover p,
+    div[data-testid="stSidebar"] button:hover span {
+        color: #FFFFFF !important;
     }
 
     .sidebar-logo-card {
@@ -147,25 +147,34 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# DIRECT NO-CACHE GOOGLE SHEETS LIVE CONNECTOR
+# DIRECT LIVE GOOGLE SHEETS PARSER (NO CACHE)
 # ---------------------------------------------------------
-# Accessing directly via Google Sheet Query API to bypass publish cache delay
-SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GVIZ_LIVE_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
+GSHEET_PUB_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pub?output=csv"
+GSHEET_GVIZ_CSV = "https://docs.google.com/spreadsheets/d/10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ/gviz/tq?tqx=out:csv&sheet=OCTOBER%202026"
 
-@st.cache_data(ttl=0) # Zero caching
-def load_direct_gsheet_live():
+@st.cache_data(ttl=0)
+def load_live_sheet_matrix():
+    # Primary Stream Direct Fetch
     try:
-        # Add timestamp parameter to force bypass any proxy/browser cache
-        timestamp_url = f"{GVIZ_LIVE_URL}&_ts={int(datetime.now().timestamp())}"
-        req = requests.get(timestamp_url, timeout=5)
-        if req.status_code == 200:
-            return pd.read_csv(io.StringIO(req.text), header=None, dtype=str).fillna("")
+        ts = int(datetime.now().timestamp())
+        url = f"{GSHEET_GVIZ_CSV}&_cachebust={ts}"
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            return pd.read_csv(io.StringIO(resp.text), header=None, dtype=str).fillna("")
     except Exception:
         pass
+
+    # Secondary Stream Direct Fetch
+    try:
+        resp = requests.get(GSHEET_PUB_CSV, timeout=5)
+        if resp.status_code == 200:
+            return pd.read_csv(io.StringIO(resp.text), header=None, dtype=str).fillna("")
+    except Exception:
+        pass
+
     return pd.DataFrame()
 
-# Official 24 RPMO Staff Roster
+# Official 24 Staff Roster
 official_roster = [
     {"Name": "Atty. Edgar G. Requilme", "Position": "SWO IV"},
     {"Name": "Aldrin B. Librero", "Position": "PDO IV"},
@@ -212,10 +221,9 @@ view_mode = st.sidebar.radio(
     ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"]
 )
 
-st.sidebar.markdown('<div class="sidebar-btn-container">', unsafe_allow_html=True)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
     st.rerun()
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Google Sheets Active")
@@ -248,13 +256,13 @@ if view_mode == "📍 Today's Live Attendance":
     
     st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-    # Read Direct Live Matrix
-    raw_df = load_direct_gsheet_live()
+    # Read Live Matrix
+    raw_df = load_live_sheet_matrix()
 
     today_display_list = []
 
     if not raw_df.empty:
-        # Step 1: Search top 15 rows for 14-Oct column index
+        # Detect column index for today (14-Oct-Wed)
         today_col_idx = None
         for r_idx in range(min(15, len(raw_df))):
             row_cells = [str(val).strip().lower() for val in raw_df.iloc[r_idx].values]
@@ -265,7 +273,7 @@ if view_mode == "📍 Today's Live Attendance":
             if today_col_idx is not None:
                 break
 
-        # Step 2: Map each employee's status
+        # Match staff with rows
         for emp in official_roster:
             e_name = emp["Name"]
             e_pos = emp["Position"]
@@ -278,7 +286,6 @@ if view_mode == "📍 Today's Live Attendance":
             for r_idx in range(len(raw_df)):
                 row_str = " ".join([str(v).lower() for v in raw_df.iloc[r_idx].values])
                 
-                # Flexible name checking
                 if parts[0] in row_str and parts[-1] in row_str:
                     if today_col_idx is not None and today_col_idx < len(raw_df.columns):
                         val = str(raw_df.iloc[r_idx, today_col_idx]).strip().upper()
@@ -301,7 +308,7 @@ if view_mode == "📍 Today's Live Attendance":
                 "Remarks": remarks_found
             })
     else:
-        # Direct Mapping Backup
+        # Default Full Roster Load
         today_display_list = [{"Name": e["Name"], "Position": e["Position"], "Status": "🏢 ONSITE", "Remarks": "Onsite Duty"} for e in official_roster]
 
     # Realtime Metric Counters
@@ -365,7 +372,7 @@ if view_mode == "📍 Today's Live Attendance":
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
     
-    gsheet_iframe_url = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/htmlembed?widget=true&headers=false"
+    gsheet_iframe_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&amp;headers=false"
     
     st.components.v1.iframe(gsheet_iframe_url, height=680, scrolling=True)
 

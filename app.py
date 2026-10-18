@@ -43,20 +43,22 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Executive Metric Cards Glassmorphism & Hover Cursor Effects */
+    /* ========================================================= */
+    /* 🌟 EXECUTIVE METRIC CARDS GLOW (LOGOUT STYLE) 🌟 */
+    /* ========================================================= */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 16px !important;
         padding: 16px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
         cursor: pointer !important;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-5px) scale(1.01) !important;
-        border-color: #0284C7 !important;
-        box-shadow: 0 10px 25px rgba(2, 132, 199, 0.2) !important;
+        transform: translateY(-5px) scale(1.02) !important;
+        border-color: #E11D48 !important;
+        box-shadow: 0 0 18px rgba(225, 29, 72, 0.5), 0 0 28px rgba(225, 29, 72, 0.25) !important;
     }
     div[data-testid="stMetric"] label {
         color: #475569 !important;
@@ -68,6 +70,41 @@ st.markdown("""
         color: #0F172A !important;
         font-weight: 900 !important;
         font-size: 26px !important;
+    }
+
+    /* ========================================================= */
+    /* 🌟 UNIFIED BUTTON ANIMATIONS & RED/ORANGE GLOW EFFECTS 🌟 */
+    /* ========================================================= */
+    div.stButton > button, 
+    div.stFormSubmitButton > button,
+    .stSidebar div.stButton > button {
+        background-color: #E2E8F0 !important;
+        color: #0F172A !important;
+        font-weight: bold !important;
+        border-radius: 10px !important;
+        border: 1px solid #CBD5E1 !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+    }
+    
+    /* HOVER STATE - MOSIGA ANG RED GLOW (RED OUTLINE & TEXT) */
+    div.stButton > button:hover, 
+    div.stFormSubmitButton > button:hover,
+    .stSidebar div.stButton > button:hover {
+        background-color: #FFFFFF !important;
+        color: #E11D48 !important;
+        border-color: #E11D48 !important;
+        box-shadow: 0 0 15px rgba(225, 29, 72, 0.6), 0 0 25px rgba(225, 29, 72, 0.3) !important;
+        transform: translateY(-2px) scale(1.01) !important;
+    }
+    
+    /* ACTIVE/CLICK STATE */
+    div.stButton > button:active, 
+    div.stFormSubmitButton > button:active,
+    .stSidebar div.stButton > button:active {
+        transform: translateY(1px) scale(0.99) !important;
+        box-shadow: 0 0 5px rgba(225, 29, 72, 0.4) !important;
     }
 
     /* Cards Styling & Smooth Cursor Hover Effects */
@@ -83,7 +120,7 @@ st.markdown("""
     }
     .today-card:hover {
         transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12) !important;
+        box-shadow: 0 0 15px rgba(2, 132, 199, 0.3) !important;
         border-left-width: 8px !important;
     }
     
@@ -99,7 +136,7 @@ st.markdown("""
     }
     .today-card-absent:hover {
         transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(225,29,72,0.15) !important;
+        box-shadow: 0 0 18px rgba(225, 29, 72, 0.4) !important;
         border-left-width: 8px !important;
     }
 
@@ -129,29 +166,6 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] * { 
         color: #0F172A !important; 
-    }
-
-    /* REFRESH BUTTON */
-    div[data-testid="stSidebar"] .stButton > button {
-        background-color: #38BDF8 !important;
-        border: 2px solid #0284C7 !important;
-        border-radius: 10px !important;
-        padding: 12px !important;
-        width: 100% !important;
-        box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3) !important;
-    }
-    div[data-testid="stSidebar"] .stButton > button p,
-    div[data-testid="stSidebar"] .stButton > button span,
-    div[data-testid="stSidebar"] .stButton > button div {
-        color: #0F172A !important;
-        font-weight: 900 !important;
-        font-size: 15px !important;
-    }
-    div[data-testid="stSidebar"] .stButton > button:hover {
-        background-color: #0284C7 !important;
-    }
-    div[data-testid="stSidebar"] .stButton > button:hover p {
-        color: #FFFFFF !important;
     }
 
     .sidebar-logo-card {

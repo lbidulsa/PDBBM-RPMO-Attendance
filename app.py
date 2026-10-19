@@ -363,7 +363,6 @@ if view_mode == "📍 Today's Live Attendance":
             raw_val = str(cell_obj.get("val", "")).strip()
             fmt_val = str(cell_obj.get("formatted", "")).strip()
             
-            # Combine raw value and formatted value to make sure notes in text are captured
             combined_text = f"{raw_val} {fmt_val}".strip()
             val_upper = combined_text.upper()
 
@@ -376,14 +375,12 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "❌ ABSENT"
               remarks_found = "ABSENT"
-              # Extract note if text is longer than standard abbreviation
               clean_note = re.sub(r'^(ABSENT|LEAVE|SL|VL|A)\s*[-:]*\s*', '', combined_text, flags=re.IGNORECASE).strip()
               cell_note = clean_note if len(clean_note) > 3 else ""
 
             elif "TRAVEL" in val_upper or val_upper == "T" or "OB" in val_upper:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
-              # Extract note if text contains travel details
               clean_note = re.sub(r'^(TRAVEL|OFFICIAL TRAVEL|T|OB)\s*[-:]*\s*', '', combined_text, flags=re.IGNORECASE).strip()
               cell_note = clean_note if len(clean_note) > 3 else ""
 

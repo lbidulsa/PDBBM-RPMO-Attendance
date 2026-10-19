@@ -7,7 +7,7 @@ import requests
 import streamlit as st
 
 # ---------------------------------------------------------
-# PAGE CONFIGURATION & EXECUTIVE LIGHT UI
+# PAGE CONFIGURATION & EXECUTIVE LIGHT UI WITH BUBBLE EFFECTS
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="PDBBM-RPMO Executive Attendance Portal",
@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom High-End Styling & Hover Cursor Effects
+# Custom High-End Styling & Interactive Hover Cursor / Bubble Effects
 st.markdown(
     """
     <style>
@@ -44,6 +44,7 @@ st.markdown(
         margin-bottom: 25px;
     }
 
+    /* Metric Cards Bubble Hover Effect */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important;
         border: 1px solid #CBD5E1 !important;
@@ -93,6 +94,7 @@ st.markdown(
         transform: translateY(-2px) scale(1.01) !important;
     }
 
+    /* Today Staff Cards Hover & Bubble Effects */
     .today-card {
         background: #FFFFFF;
         padding: 18px 22px;
@@ -101,6 +103,12 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+    }
+    .today-card:hover {
+        transform: translateY(-3px) scale(1.008) !important;
+        box-shadow: 0 0 18px rgba(2, 132, 199, 0.35) !important;
+        border-left-width: 8px !important;
     }
     
     .today-card-absent {
@@ -110,6 +118,29 @@ st.markdown(
         border-left: 6px solid #E11D48;
         box-shadow: 0 4px 12px rgba(225,29,72,0.05);
         margin-bottom: 12px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+    }
+    .today-card-absent:hover {
+        transform: translateY(-3px) scale(1.008) !important;
+        box-shadow: 0 0 18px rgba(225, 29, 72, 0.4) !important;
+        border-left-width: 8px !important;
+    }
+
+    /* Interactive Name Glow Bubble Style */
+    .staff-name-bubble {
+        color: #0F172A;
+        font-size: 18px;
+        font-weight: 800;
+        display: inline-block;
+        transition: all 0.2s ease-in-out;
+        padding: 2px 6px;
+        border-radius: 6px;
+    }
+    .staff-name-bubble:hover {
+        color: #0284C7;
+        background: #E0F2FE;
+        transform: scale(1.03);
     }
 
     .note-purpose-box {
@@ -313,7 +344,7 @@ if view_mode == "📍 Today's Live Attendance":
     e_pos = emp["Position"]
 
     status_found = "🏢 ONSITE"
-    remarks_found = "Onsite Duty / In Office"
+    remarks_found = "In Office - Onsite"
     cell_note = ""
 
     if raw_matrix:
@@ -339,7 +370,9 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "❌ ABSENT"
               remarks_found = "ABSENT"
-              cell_note = val if len(val) > 10 and "ABSENT" not in val_upper else ""
+              cell_note = (
+                  val if len(val) > 10 and "ABSENT" not in val_upper else ""
+              )
             elif "TRAVEL" in val_upper or val_upper == "T" or "OB" in val_upper:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
@@ -438,7 +471,7 @@ if view_mode == "📍 Today's Live Attendance":
         item for item in today_display_list if "ABSENT" in item["Status"]
     ]
 
-  # Render Cards
+  # Render Cards with preserved Bubble / Hover Effects
   for log in filtered_display_list:
     is_absent = "ABSENT" in log["Status"]
     is_travel = "TRAVEL" in log["Status"]
@@ -463,8 +496,9 @@ if view_mode == "📍 Today's Live Attendance":
         f'<div class="{card_class}"><div style="display: flex;'
         " justify-content: space-between; align-items: flex-start; flex-wrap:"
         ' wrap; gap: 10px;"><div style="flex: 1; min-width: 280px;"><h3'
-        ' style="margin:0; color:#0F172A; font-size:18px; font-weight:800;">👤'
-        f' {log["Name"]} <span style="font-size:13px; color:#64748B;'
+        ' style="margin:0; font-size:18px; font-weight:800;"><span'
+        f' class="staff-name-bubble">👤 {log["Name"]}</span> <span'
+        ' style="font-size:13px; color:#64748B;'
         f' font-weight:600;">({log["Position"]})</span></h3><p'
         ' style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current'
         f' Status / Remarks:</b> {log["Remarks"]}</p>{note_box}</div><div><span'

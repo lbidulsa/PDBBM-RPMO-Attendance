@@ -210,9 +210,11 @@ def fetch_live_matrix_data():
           row_cells = []
           for cell in row.get("c", []):
             val = ""
+            formatted_val = ""
             if cell:
-              val = str(cell.get("v", "") or cell.get("f", ""))
-            row_cells.append({"val": val})
+              val = str(cell.get("v", "") or "")
+              formatted_val = str(cell.get("f", "") or "")
+            row_cells.append({"val": val, "formatted": formatted_val})
           parsed_table.append(row_cells)
         return parsed_table
   except Exception:
@@ -358,8 +360,12 @@ if view_mode == "📍 Today's Live Attendance":
         if first_word in row_norm_str and last_word in row_norm_str:
           if today_col_idx is not None and today_col_idx < len(row):
             cell_obj = row[today_col_idx]
-            val = str(cell_obj.get("val", "")).strip()
-            val_upper = val.upper()
+            raw_val = str(cell_obj.get("val", "")).strip()
+            fmt_val = str(cell_obj.get("formatted", "")).strip()
+            
+            # Combine raw value and formatted value to make sure notes in text are captured
+            combined_text = f"{raw_val} {fmt_val}".strip()
+            val_upper = combined_text.upper()
 
             if (
                 "ABSENT" in val_upper
@@ -370,16 +376,17 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "❌ ABSENT"
               remarks_found = "ABSENT"
-              cell_note = (
-                  val if len(val) > 10 and "ABSENT" not in val_upper else ""
-              )
+              # Extract note if text is longer than standard abbreviation
+              clean_note = re.sub(r'^(ABSENT|LEAVE|SL|VL|A)\s*[-:]*\s*', '', combined_text, flags=re.IGNORECASE).strip()
+              cell_note = clean_note if len(clean_note) > 3 else ""
+
             elif "TRAVEL" in val_upper or val_upper == "T" or "OB" in val_upper:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
-              if len(val) > 10 and "TRAVEL" not in val_upper:
-                cell_note = val
-              else:
-                cell_note = ""
+              # Extract note if text contains travel details
+              clean_note = re.sub(r'^(TRAVEL|OFFICIAL TRAVEL|T|OB)\s*[-:]*\s*', '', combined_text, flags=re.IGNORECASE).strip()
+              cell_note = clean_note if len(clean_note) > 3 else ""
+
             elif (
                 "ONSITE" in val_upper
                 or "PRESENT" in val_upper
@@ -485,6 +492,7 @@ if view_mode == "📍 Today's Live Attendance":
     else:
       pill_class = "pill-absent"
 
+    # Display Note Box if note exists
     note_box = (
         '<div class="note-purpose-box">📌 <b>REMARKS /'
         f' NOTES:</b><br>{log["Note"]}</div>'

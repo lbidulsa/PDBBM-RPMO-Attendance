@@ -2,7 +2,6 @@ from datetime import datetime
 import json
 import os
 import re
-from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 import streamlit as st
@@ -153,10 +152,9 @@ st.markdown(
 )
 
 # ---------------------------------------------------------
-# DIRECT LIVE GOOGLE SHEETS HTML & GVIZ PARSER
+# DIRECT LIVE JSON GVIZ PARSER
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-PUBHTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml"
 GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
 
 
@@ -165,30 +163,7 @@ def normalize_string(s):
 
 
 @st.cache_data(ttl=0)
-def fetch_live_published_data():
-  """Fetches exact live cell values and published cell notes/tooltips from Google Sheets pubhtml"""
-  try:
-    ts = int(datetime.now().timestamp())
-    res = requests.get(f"{PUBHTML_URL}?_nocache={ts}", timeout=10)
-    if res.status_code == 200:
-      soup = BeautifulSoup(res.text, "html.parser")
-      tables = soup.find_all("table")
-      if tables:
-        matrix = []
-        for row in tables[0].find_all("tr"):
-          row_cells = []
-          for cell in row.find_all(["td", "th"]):
-            text_val = cell.get_text(strip=True)
-            note_val = (
-                cell.get("title", "") or cell.get("data-tooltip", "") or ""
-            )
-            row_cells.append({"val": text_val, "note": note_val})
-          matrix.append(row_cells)
-        return matrix
-  except Exception:
-    pass
-
-  # Fallback
+def fetch_live_matrix_data():
   try:
     ts = int(datetime.now().timestamp())
     res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=8)
@@ -206,7 +181,7 @@ def fetch_live_published_data():
             val = ""
             if cell:
               val = str(cell.get("v", "") or cell.get("f", ""))
-            row_cells.append({"val": val, "note": ""})
+            row_cells.append({"val": val})
           parsed_table.append(row_cells)
         return parsed_table
   except Exception:
@@ -241,6 +216,21 @@ official_roster = [
     {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"},
 ]
+
+# Automatic Travel/Absent Remarks Dictionary
+active_notes_lookup = {
+    "Atty. Edgar G. Requilme": "RMDC @El Salvador",
+    "Aldrin B. Librero": "Bukidnon POO meeting cum CCEF Checkpoint",
+    "Sowad Repors Samporna": "Bukidnon POO meeting cum CCEF Checkpoint",
+    "Famiah Crista O. Navarro": "Bukidnon POO meeting cum CCEF Checkpoint",
+    "Areej M. Balindong": "Bukidnon POO meeting cum CCEF Checkpoint",
+    "Phoebe Delalyn L. Tidalgo": (
+        "Provision of Technical Assistance to LNA PAMANA LGU-led staff"
+    ),
+    "Jelyn A. Damasing": (
+        "PAMANA CDPD Film for KALINAW Awards 2026 @Oroquieta City"
+    ),
+}
 
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION & LOGO
@@ -314,7 +304,7 @@ if view_mode == "📍 Today's Live Attendance":
 
   st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-  raw_matrix = fetch_live_published_data()
+  raw_matrix = fetch_live_matrix_data()
 
   today_display_list = []
 
@@ -332,7 +322,7 @@ if view_mode == "📍 Today's Live Attendance":
       if today_col_idx is not None:
         break
 
-  # Extract Status and Exact Realtime Note from Google Sheets Cell
+  # Extract Status and Dynamic Notes per Staff
   for emp in official_roster:
     e_name = emp["Name"]
     e_pos = emp["Position"]
@@ -352,30 +342,37 @@ if view_mode == "📍 Today's Live Attendance":
         if first_word in row_norm_str and last_word in row_norm_str:
           if today_col_idx is not None and today_col_idx < len(row):
             cell_obj = row[today_col_idx]
-            val = str(cell_obj.get("val", "")).strip().upper()
-            cell_note = str(cell_obj.get("note", "")).strip()
+            val = str(cell_obj.get("val", "")).strip()
+            val_upper = val.upper()
 
             if (
-                "ABSENT" in val
-                or val == "A"
-                or "LEAVE" in val
-                or "SL" in val
-                or "VL" in val
+                "ABSENT" in val_upper
+                or val_upper == "A"
+                or "LEAVE" in val_upper
+                or "SL" in val_upper
+                or "VL" in val_upper
             ):
               status_found = "❌ ABSENT"
               remarks_found = "Official Leave / Absent"
-            elif "TRAVEL" in val or val == "T" or "OB" in val:
+              cell_note = active_notes_lookup.get(e_name, "Official Leave")
+            elif "TRAVEL" in val_upper or val_upper == "T" or "OB" in val_upper:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
+              if len(val) > 10 and "TRAVEL" not in val_upper:
+                cell_note = val
+              else:
+                cell_note = active_notes_lookup.get(
+                    e_name, "Bukidnon POO meeting cum CCEF Checkpoint"
+                )
             elif (
-                "ONSITE" in val
-                or "PRESENT" in val
-                or val == "P"
-                or "SITE" in val
+                "ONSITE" in val_upper
+                or "PRESENT" in val_upper
+                or val_upper == "P"
+                or "SITE" in val_upper
             ):
               status_found = "🏢 ONSITE"
               remarks_found = "In Office - Onsite"
-              # 🌟 FIX: If Onsite, do NOT display old travel notes!
+              # AUTOMATICALLY REMOVE NOTES WHEN ONSITE
               cell_note = ""
           break
 

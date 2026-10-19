@@ -237,37 +237,40 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"},
 ]
 
-# Universal Staff Notes Directory
+# Universal Staff Notes Directory for Official Travel / Absent
 staff_notes_directory = {
     "Atty. Edgar G. Requilme": "RMDC @El Salvador",
+    "Aldrin B. Librero": (
+        "Official Travel / Field Monitoring & Coordination Visit"
+    ),
+    "Sowad Repors Samporna": (
+        "Official Travel / Field Monitoring & Coordination Visit"
+    ),
+    "Famiah Crista O. Navarro": (
+        "Official Travel / Field Monitoring & Coordination Visit"
+    ),
+    "Areej M. Balindong": (
+        "Official Travel / Field Monitoring & Coordination Visit"
+    ),
     "Litecy L. Gatabon": (
         "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents, in support of the"
-        " target obligation for the implementation of PAMANA CDPD in the 10"
-        " barangays of Oroquieta City @Oroquieta City"
+        " session in preparation for the RFR documents @Oroquieta City"
     ),
     "Dharyl James L. Waniwan": (
         "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents, in support of the"
-        " target obligation for the implementation of PAMANA CDPD in the 10"
-        " barangays of Oroquieta City @Oroquieta City"
+        " session in preparation for the RFR documents @Oroquieta City"
     ),
     "Stephen P. Celo": (
         "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents, in support of the"
-        " target obligation for the implementation of PAMANA CDPD in the 10"
-        " barangays of Oroquieta City @Oroquieta City"
+        " session in preparation for the RFR documents @Oroquieta City"
     ),
     "Phoebe Delalyn L. Tidalgo": (
         "Provision of Technical Assistance to Lanao del Norte PAMANA LGU-led"
-        " staff on Proper SLPA Turn-over to LGU Lanao del Norte Areas and SLPA"
-        " Livelihood Assessment @LDN"
+        " staff on Proper SLPA Turn-over @LDN"
     ),
     "Jelyn A. Damasing": (
         "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents, in support of the"
-        " target obligation for the implementation of PAMANA CDPD in the 10"
-        " barangays of Oroquieta City @Oroquieta City"
+        " session @Oroquieta City"
     ),
     "Jaida Farhana T. Ibrahim": "half day - afternoon only",
 }
@@ -348,7 +351,7 @@ if view_mode == "📍 Today's Live Attendance":
 
   today_display_list = []
 
-  # Dynamic Column Index Search for Today's Date (e.g. "19-Oct-Mon" or "19-Oct")
+  # Dynamic Column Index Search for Today's Date
   today_col_idx = None
   if raw_matrix:
     for r_idx in range(min(15, len(raw_matrix))):
@@ -356,21 +359,20 @@ if view_mode == "📍 Today's Live Attendance":
           str(cell.get("val", "")).strip().lower() for cell in raw_matrix[r_idx]
       ]
       for c_idx, cell in enumerate(row_vals):
-        # Flexible date match: e.g. "19-oct" in "19-oct-mon" or exact day number
         if f"{day_num}-{month_abbr}" in cell or cell == day_num:
           today_col_idx = c_idx
           break
       if today_col_idx is not None:
         break
 
-  # Extract Status and Comments per Staff
+  # Extract Status and Dynamic Notes per Staff
   for emp in official_roster:
     e_name = emp["Name"]
     e_pos = emp["Position"]
 
     status_found = "🏢 ONSITE"
     remarks_found = "Onsite Duty / In Office"
-    staff_note = staff_notes_directory.get(e_name, "")
+    dynamic_note = ""
 
     if raw_matrix:
       first_word = normalize_string(e_name.split()[0])
@@ -394,9 +396,20 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "❌ ABSENT"
               remarks_found = "Official Leave / Absent"
+              dynamic_note = staff_notes_directory.get(
+                  e_name, "Official Leave"
+              )
             elif "TRAVEL" in val or val == "T" or "OB" in val:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
+              # Check if note is inside cell or use directory note
+              cell_text = str(cell_obj.get("val", "")).strip()
+              if len(cell_text) > 10 and "TRAVEL" not in cell_text.upper():
+                dynamic_note = cell_text
+              else:
+                dynamic_note = staff_notes_directory.get(
+                    e_name, "Official Travel / Field Work"
+                )
             elif (
                 "ONSITE" in val
                 or "PRESENT" in val
@@ -405,6 +418,8 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "🏢 ONSITE"
               remarks_found = "In Office - Onsite"
+              # 🌟 FIX: Kapag ONSITE, TANGTANGON ANG TRAVEL NOTES!
+              dynamic_note = ""
           break
 
     today_display_list.append({
@@ -412,7 +427,7 @@ if view_mode == "📍 Today's Live Attendance":
         "Position": e_pos,
         "Status": status_found,
         "Remarks": remarks_found,
-        "Note": staff_note,
+        "Note": dynamic_note,
     })
 
   # Realtime Counters

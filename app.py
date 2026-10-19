@@ -217,21 +217,6 @@ official_roster = [
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"},
 ]
 
-# Automatic Travel/Absent Remarks Dictionary
-active_notes_lookup = {
-    "Atty. Edgar G. Requilme": "RMDC @El Salvador",
-    "Aldrin B. Librero": "Bukidnon POO meeting cum CCEF Checkpoint",
-    "Sowad Repors Samporna": "Bukidnon POO meeting cum CCEF Checkpoint",
-    "Famiah Crista O. Navarro": "Bukidnon POO meeting cum CCEF Checkpoint",
-    "Areej M. Balindong": "Bukidnon POO meeting cum CCEF Checkpoint",
-    "Phoebe Delalyn L. Tidalgo": (
-        "Provision of Technical Assistance to LNA PAMANA LGU-led staff"
-    ),
-    "Jelyn A. Damasing": (
-        "PAMANA CDPD Film for KALINAW Awards 2026 @Oroquieta City"
-    ),
-}
-
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION & LOGO
 # ---------------------------------------------------------
@@ -353,17 +338,15 @@ if view_mode == "📍 Today's Live Attendance":
                 or "VL" in val_upper
             ):
               status_found = "❌ ABSENT"
-              remarks_found = "Official Leave / Absent"
-              cell_note = active_notes_lookup.get(e_name, "Official Leave")
+              remarks_found = "ABSENT"
+              cell_note = val if len(val) > 10 and "ABSENT" not in val_upper else ""
             elif "TRAVEL" in val_upper or val_upper == "T" or "OB" in val_upper:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
               if len(val) > 10 and "TRAVEL" not in val_upper:
                 cell_note = val
               else:
-                cell_note = active_notes_lookup.get(
-                    e_name, "Bukidnon POO meeting cum CCEF Checkpoint"
-                )
+                cell_note = ""
             elif (
                 "ONSITE" in val_upper
                 or "PRESENT" in val_upper
@@ -372,7 +355,6 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "🏢 ONSITE"
               remarks_found = "In Office - Onsite"
-              # AUTOMATICALLY REMOVE NOTES WHEN ONSITE
               cell_note = ""
           break
 

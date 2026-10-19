@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import os
 import re
+from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 import streamlit as st
@@ -92,13 +93,6 @@ st.markdown(
         box-shadow: 0 0 15px rgba(225, 29, 72, 0.6), 0 0 25px rgba(225, 29, 72, 0.3) !important;
         transform: translateY(-2px) scale(1.01) !important;
     }
-    
-    div.stButton > button:active, 
-    div.stFormSubmitButton > button:active,
-    .stSidebar div.stButton > button:active {
-        transform: translateY(1px) scale(0.99) !important;
-        box-shadow: 0 0 5px rgba(225, 29, 72, 0.4) !important;
-    }
 
     .today-card {
         background: #FFFFFF;
@@ -108,12 +102,6 @@ st.markdown(
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        cursor: pointer !important;
-    }
-    .today-card:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 0 15px rgba(2, 132, 199, 0.3) !important;
-        border-left-width: 8px !important;
     }
     
     .today-card-absent {
@@ -123,13 +111,6 @@ st.markdown(
         border-left: 6px solid #E11D48;
         box-shadow: 0 4px 12px rgba(225,29,72,0.05);
         margin-bottom: 12px;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        cursor: pointer !important;
-    }
-    .today-card-absent:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 0 18px rgba(225, 29, 72, 0.4) !important;
-        border-left-width: 8px !important;
     }
 
     .note-purpose-box {
@@ -172,9 +153,10 @@ st.markdown(
 )
 
 # ---------------------------------------------------------
-# DIRECT LIVE JSON GVIZ PARSER
+# DIRECT LIVE GOOGLE SHEETS HTML & GVIZ PARSER
 # ---------------------------------------------------------
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
+PUBHTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml"
 GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=OCTOBER%202026"
 
 
@@ -183,7 +165,30 @@ def normalize_string(s):
 
 
 @st.cache_data(ttl=0)
-def fetch_live_matrix_data():
+def fetch_live_published_data():
+  """Fetches exact live cell values and published cell notes/tooltips from Google Sheets pubhtml"""
+  try:
+    ts = int(datetime.now().timestamp())
+    res = requests.get(f"{PUBHTML_URL}?_nocache={ts}", timeout=10)
+    if res.status_code == 200:
+      soup = BeautifulSoup(res.text, "html.parser")
+      tables = soup.find_all("table")
+      if tables:
+        matrix = []
+        for row in tables[0].find_all("tr"):
+          row_cells = []
+          for cell in row.find_all(["td", "th"]):
+            text_val = cell.get_text(strip=True)
+            note_val = (
+                cell.get("title", "") or cell.get("data-tooltip", "") or ""
+            )
+            row_cells.append({"val": text_val, "note": note_val})
+          matrix.append(row_cells)
+        return matrix
+  except Exception:
+    pass
+
+  # Fallback
   try:
     ts = int(datetime.now().timestamp())
     res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=8)
@@ -201,7 +206,7 @@ def fetch_live_matrix_data():
             val = ""
             if cell:
               val = str(cell.get("v", "") or cell.get("f", ""))
-            row_cells.append({"val": val})
+            row_cells.append({"val": val, "note": ""})
           parsed_table.append(row_cells)
         return parsed_table
   except Exception:
@@ -236,44 +241,6 @@ official_roster = [
     {"Name": "Christian Kyle A. Sanchez", "Position": "ADAS II"},
     {"Name": "Lawrence R. Pichay", "Position": "ADAS II"},
 ]
-
-# Universal Staff Notes Directory for Official Travel / Absent
-staff_notes_directory = {
-    "Atty. Edgar G. Requilme": "RMDC @El Salvador",
-    "Aldrin B. Librero": (
-        "Official Travel / Field Monitoring & Coordination Visit"
-    ),
-    "Sowad Repors Samporna": (
-        "Official Travel / Field Monitoring & Coordination Visit"
-    ),
-    "Famiah Crista O. Navarro": (
-        "Official Travel / Field Monitoring & Coordination Visit"
-    ),
-    "Areej M. Balindong": (
-        "Official Travel / Field Monitoring & Coordination Visit"
-    ),
-    "Litecy L. Gatabon": (
-        "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents @Oroquieta City"
-    ),
-    "Dharyl James L. Waniwan": (
-        "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents @Oroquieta City"
-    ),
-    "Stephen P. Celo": (
-        "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session in preparation for the RFR documents @Oroquieta City"
-    ),
-    "Phoebe Delalyn L. Tidalgo": (
-        "Provision of Technical Assistance to Lanao del Norte PAMANA LGU-led"
-        " staff on Proper SLPA Turn-over @LDN"
-    ),
-    "Jelyn A. Damasing": (
-        "PAMANA CDPD Film for the KALINAW Awards 2026 and conduct a technical"
-        " session @Oroquieta City"
-    ),
-    "Jaida Farhana T. Ibrahim": "half day - afternoon only",
-}
 
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION & LOGO
@@ -347,7 +314,7 @@ if view_mode == "📍 Today's Live Attendance":
 
   st.markdown(f"### 📍 Attendance Status Today — **{today_str}**")
 
-  raw_matrix = fetch_live_matrix_data()
+  raw_matrix = fetch_live_published_data()
 
   today_display_list = []
 
@@ -365,14 +332,14 @@ if view_mode == "📍 Today's Live Attendance":
       if today_col_idx is not None:
         break
 
-  # Extract Status and Dynamic Notes per Staff
+  # Extract Status and Exact Realtime Note from Google Sheets Cell
   for emp in official_roster:
     e_name = emp["Name"]
     e_pos = emp["Position"]
 
     status_found = "🏢 ONSITE"
     remarks_found = "Onsite Duty / In Office"
-    dynamic_note = ""
+    cell_note = ""
 
     if raw_matrix:
       first_word = normalize_string(e_name.split()[0])
@@ -386,6 +353,7 @@ if view_mode == "📍 Today's Live Attendance":
           if today_col_idx is not None and today_col_idx < len(row):
             cell_obj = row[today_col_idx]
             val = str(cell_obj.get("val", "")).strip().upper()
+            cell_note = str(cell_obj.get("note", "")).strip()
 
             if (
                 "ABSENT" in val
@@ -396,20 +364,9 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "❌ ABSENT"
               remarks_found = "Official Leave / Absent"
-              dynamic_note = staff_notes_directory.get(
-                  e_name, "Official Leave"
-              )
             elif "TRAVEL" in val or val == "T" or "OB" in val:
               status_found = "🚗 OFFICIAL TRAVEL"
               remarks_found = "Official Travel / Field Work"
-              # Check if note is inside cell or use directory note
-              cell_text = str(cell_obj.get("val", "")).strip()
-              if len(cell_text) > 10 and "TRAVEL" not in cell_text.upper():
-                dynamic_note = cell_text
-              else:
-                dynamic_note = staff_notes_directory.get(
-                    e_name, "Official Travel / Field Work"
-                )
             elif (
                 "ONSITE" in val
                 or "PRESENT" in val
@@ -418,8 +375,8 @@ if view_mode == "📍 Today's Live Attendance":
             ):
               status_found = "🏢 ONSITE"
               remarks_found = "In Office - Onsite"
-              # 🌟 FIX: Kapag ONSITE, TANGTANGON ANG TRAVEL NOTES!
-              dynamic_note = ""
+              # 🌟 FIX: If Onsite, do NOT display old travel notes!
+              cell_note = ""
           break
 
     today_display_list.append({
@@ -427,7 +384,7 @@ if view_mode == "📍 Today's Live Attendance":
         "Position": e_pos,
         "Status": status_found,
         "Remarks": remarks_found,
-        "Note": dynamic_note,
+        "Note": cell_note,
     })
 
   # Realtime Counters

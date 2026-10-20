@@ -114,8 +114,8 @@ st.markdown(
 
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
 
-# INJECTED GOOGLE SHEETS API KEY
-GOOGLE_API_KEY = "AIzaSyDiW6mBtJbwykz-5Inr2ampnMVG3NXRmOY"
+# DYNAMIC SAFE SECRET INJECTION (PREVENTS PUBLIC GITHUB LEAKS)
+GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
 
 def normalize_string(s):
     return re.sub(r"[^a-zA-Z0-9]", "", str(s)).lower()

@@ -379,21 +379,26 @@ if view_mode == "📍 Today's Live Attendance":
 
         note_box = f'<div class="note-purpose-box">📌 <b>REMARKS / NOTES:</b><br>{log["Note"]}</div>' if log["Note"] else ""
 
-        card_html = f'''
-        <div class="{card_class}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
-                <div style="flex: 1; min-width: 280px;">
-                    <h3 style="margin:0; font-size:18px; font-weight:800;">
-                        <span class="staff-name-bubble">👤 {log["Name"]}</span> 
-                        <span style="font-size:13px; color:#64748B; font-weight:600;">({log["Position"]})</span>
-                    </h3>
-                    <p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {log["Remarks"]}</p>
-                    {note_box}
-                </div>
-                <div><span class="{pill_class}">{log["Status"]}</span></div>
-            </div>
-        </div>
-        '''
+        name_str = log["Name"]
+        pos_str = log["Position"]
+        remarks_str = log["Remarks"]
+        status_str = log["Status"]
+
+        card_html = (
+            f'<div class="{card_class}">'
+            f'<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">'
+            f'<div style="flex: 1; min-width: 280px;">'
+            f'<h3 style="margin:0; font-size:18px; font-weight:800;">'
+            f'<span class="staff-name-bubble">👤 {name_str}</span> '
+            f'<span style="font-size:13px; color:#64748B; font-weight:600;">({pos_str})</span>'
+            f'</h3>'
+            f'<p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {remarks_str}</p>'
+            f'{note_box}'
+            f'</div>'
+            f'<div><span class="{pill_class}">{status_str}</span></div>'
+            f'</div>'
+            f'</div>'
+        )
         st.markdown(card_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------

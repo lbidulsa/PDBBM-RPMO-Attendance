@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 import os
 import re
+import calendar
 import pandas as pd
 import requests
 import streamlit as st
@@ -28,7 +29,7 @@ st.markdown(
     }
     .glow-header-sub { color: #64748B; font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 20px; }
     
-    /* Metric Cards Bubble Hover Effect */
+    /* Metric Cards Hover Effect */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important; border: 1px solid #CBD5E1 !important;
         border-radius: 16px !important; padding: 16px !important;
@@ -57,7 +58,7 @@ st.markdown(
         transform: translateY(-2px) scale(1.01) !important;
     }
 
-    /* Today Staff Cards Hover & Bubble Effects */
+    /* Today Staff Cards Hover */
     .today-card {
         background: #FFFFFF; padding: 18px 22px; border-radius: 14px;
         border-left: 6px solid #0284C7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 12px;
@@ -78,7 +79,7 @@ st.markdown(
         box-shadow: 0 0 18px rgba(225, 29, 72, 0.4) !important; border-left-width: 8px !important;
     }
 
-    /* Event Calendar Custom Card */
+    /* Event Calendar Cards */
     .event-card {
         background: #FFFFFF; border: 1px solid #CBD5E1; border-left: 6px solid #8B5CF6;
         border-radius: 14px; padding: 18px 22px; margin-bottom: 14px;
@@ -87,6 +88,28 @@ st.markdown(
     .event-card:hover {
         transform: translateY(-3px) scale(1.005); border-color: #8B5CF6;
         box-shadow: 0 0 20px rgba(139, 92, 246, 0.35); border-left-width: 8px;
+    }
+
+    /* Executive Visual Calendar Grid Styling */
+    .cal-grid-header {
+        background: #1E293B; color: #FFFFFF; font-weight: 800; text-align: center;
+        padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 8px;
+    }
+    .cal-day-box {
+        background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px;
+        min-height: 110px; padding: 8px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
+    }
+    .cal-day-box:hover {
+        border-color: #0284C7; box-shadow: 0 0 12px rgba(2, 132, 199, 0.25);
+    }
+    .cal-day-num {
+        font-weight: 900; font-size: 14px; color: #0F172A; margin-bottom: 4px;
+    }
+    .cal-event-pill {
+        background: #F3E8FF; color: #6B21A8; font-size: 11px; font-weight: 700;
+        padding: 3px 6px; border-radius: 6px; border: 1px solid #E9D5FF; margin-bottom: 4px;
+        word-wrap: break-word; line-height: 1.2;
     }
 
     .staff-name-bubble {
@@ -435,63 +458,124 @@ if view_mode == "📍 Today's Attendance":
 # VIEW 2: INTERACTIVE PDBBM ACTIVITY CALENDAR
 # ---------------------------------------------------------
 elif view_mode == "📅 Activity Calendar":
-    st.markdown("### 📅 PDBBM Integrated Activity Calendar & Event Schedule")
+    st.markdown("### 📅 PDBBM Executive Activity Calendar 2026")
     
     df_cal = fetch_activity_calendar_data()
 
-    if not df_cal.empty:
-        # Top Metrics for Activities
-        col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("📋 TOTAL ACTIVITIES", f"{len(df_cal)} Scheduled")
-        col_m2.metric("📅 CALENDAR SOURCE", "Live Google Sheets")
-        col_m3.metric("⚡ AUTO SYNC", "Active (Realtime)")
+    # Top Controls: Filter by Month / Whole Year & Search
+    f_col1, f_col2 = st.columns([2, 2])
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        search_cal = st.text_input("🔍 Search Activities (by Event Name, Venue, Lead Unit, or Date):", "")
-        
+    months_list = [
+        "🗓️ All Months (Whole Year 2026)",
+        "January 2026", "February 2026", "March 2026", "April 2026",
+        "May 2026", "June 2026", "July 2026", "August 2026",
+        "September 2026", "October 2026", "November 2026", "December 2026"
+    ]
+
+    with f_col1:
+        selected_month = st.selectbox("📆 Select Calendar Month View:", months_list, index=10) # Default October 2026
+
+    with f_col2:
+        search_cal = st.text_input("🔍 Quick Search Event / Location / Unit:", "")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Filter Data by Selected Month & Search
+    df_filtered_cal = df_cal.copy()
+    if not df_filtered_cal.empty:
+        if "All Months" not in selected_month:
+            m_name = selected_month.split()[0] # e.g. "October"
+            df_filtered_cal = df_filtered_cal[
+                df_filtered_cal.astype(str).apply(lambda row: row.str.contains(m_name, case=False).any(), axis=1)
+            ]
+
         if search_cal:
-            mask = df_cal.astype(str).apply(lambda row: row.str.contains(search_cal, case=False).any(), axis=1)
-            df_cal_display = df_cal[mask]
+            df_filtered_cal = df_filtered_cal[
+                df_filtered_cal.astype(str).apply(lambda row: row.str.contains(search_cal, case=False).any(), axis=1)
+            ]
+
+    # Metrics Summary Bar
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("📋 TOTAL EVENTS FOUND", f"{len(df_filtered_cal)} Activities")
+    col_m2.metric("📆 SELECTED VIEW", selected_month.replace("🗓️ ", ""))
+    col_m3.metric("⚡ LIVE SYNC", "Google Sheets Active")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    tab_visual_grid, tab_cards_view = st.tabs(["📅 Executive Visual Calendar Grid", "🎴 Smart Event Cards View"])
+
+    # 1. EXECUTIVE VISUAL CALENDAR GRID VIEW
+    with tab_visual_grid:
+        if "All Months" in selected_month:
+            st.info("💡 **Tip:** Pumili ng tiyak na buwan sa dropdown sa itaas para makita ang kumpletong **Visual Grid Calendar**.")
         else:
-            df_cal_display = df_cal
+            # Generate Real Calendar Grid for the selected month
+            m_idx = months_list.index(selected_month)
+            year = 2026
+            month_cal = calendar.monthcalendar(year, m_idx)
 
-        st.markdown(f"#### 🎯 Scheduled Events ({len(df_cal_display)})")
+            st.markdown(f"#### 🗓️ Calendar Grid for **{selected_month}**")
 
-        # Tab Views for Activity Display
-        tab_cards, tab_matrix = st.tabs(["🎴 Interactive Event Cards", "📊 Full Sheet Matrix View"])
+            # Days of Week Header
+            days_head = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            h_cols = st.columns(7)
+            for i, d_name in enumerate(days_head):
+                h_cols[i].markdown(f'<div class="cal-grid-header">{d_name}</div>', unsafe_allow_html=True)
 
-        with tab_cards:
-            if df_cal_display.empty:
-                st.info("Walang nahanap na activity batay sa iyong hinahanap.")
-            else:
-                for idx, row in df_cal_display.iterrows():
-                    cols_list = list(df_cal_display.columns)
-                    title_val = str(row[cols_list[0]]).strip() if len(cols_list) > 0 else "Activity Event"
-                    date_val = str(row[cols_list[1]]).strip() if len(cols_list) > 1 else "TBA"
-                    venue_val = str(row[cols_list[2]]).strip() if len(cols_list) > 2 else "TBA"
-                    unit_val = str(row[cols_list[3]]).strip() if len(cols_list) > 3 else "PDBBM RPMO"
+            # Render Calendar Weeks
+            for week in month_cal:
+                w_cols = st.columns(7)
+                for day_idx, day_num in enumerate(week):
+                    if day_num == 0:
+                        w_cols[day_idx].markdown('<div class="cal-day-box" style="background:#F8FAFC; border-style:dashed;"></div>', unsafe_allow_html=True)
+                    else:
+                        # Match Events on this specific day number
+                        day_events = []
+                        if not df_filtered_cal.empty:
+                            for _, r in df_filtered_cal.iterrows():
+                                row_str = " ".join([str(v) for v in r.values])
+                                if str(day_num) in row_str:
+                                    # Pick title column
+                                    title_txt = str(r.values[0]) if len(r.values) > 0 else "Activity"
+                                    day_events.append(title_txt)
 
-                    card_event_html = (
-                        f'<div class="event-card">'
-                        f'<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">'
-                        f'<div style="flex: 1; min-width: 280px;">'
-                        f'<h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">📅 {title_val}</h3>'
-                        f'<p style="margin:6px 0 2px 0; color:#475569; font-size:14px;"><b>📆 Date / Schedule:</b> {date_val}</p>'
-                        f'<p style="margin:2px 0 0 0; color:#475569; font-size:14px;"><b>📍 Venue / Location:</b> {venue_val}</p>'
-                        f'</div>'
-                        f'<div><span class="pill-event">🏷️ {unit_val}</span></div>'
-                        f'</div>'
-                        f'</div>'
-                    )
-                    st.markdown(card_event_html, unsafe_allow_html=True)
+                        events_html = ""
+                        for ev in day_events[:3]: # limit 3 pills max per cell
+                            events_html += f'<div class="cal-event-pill">📌 {ev[:22]}...</div>' if len(ev) > 22 else f'<div class="cal-event-pill">📌 {ev}</div>'
 
-        with tab_matrix:
-            st.dataframe(df_cal_display, use_container_width=True)
+                        box_html = (
+                            f'<div class="cal-day-box">'
+                            f'<div class="cal-day-num">{day_num}</div>'
+                            f'{events_html}'
+                            f'</div>'
+                        )
+                        w_cols[day_idx].markdown(box_html, unsafe_allow_html=True)
 
-    else:
-        st.markdown("#### 🌐 Live Sheet Interactive Calendar View")
-        st.components.v1.iframe(CALENDAR_PUBHTML_URL, height=650, scrolling=True)
+    # 2. SMART EVENT CARDS VIEW
+    with tab_cards_view:
+        if df_filtered_cal.empty:
+            st.warning("⚠️ Walang nahanap na activity o event sa piniling kategorya.")
+        else:
+            for idx, row in df_filtered_cal.iterrows():
+                cols_list = list(df_filtered_cal.columns)
+                title_val = str(row[cols_list[0]]).strip() if len(cols_list) > 0 else "Activity Event"
+                date_val = str(row[cols_list[1]]).strip() if len(cols_list) > 1 else "TBA"
+                venue_val = str(row[cols_list[2]]).strip() if len(cols_list) > 2 else "TBA"
+                unit_val = str(row[cols_list[3]]).strip() if len(cols_list) > 3 else "PDBBM RPMO"
+
+                card_event_html = (
+                    f'<div class="event-card">'
+                    f'<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">'
+                    f'<div style="flex: 1; min-width: 280px;">'
+                    f'<h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">📅 {title_val}</h3>'
+                    f'<p style="margin:6px 0 2px 0; color:#475569; font-size:14px;"><b>📆 Date / Schedule:</b> {date_val}</p>'
+                    f'<p style="margin:2px 0 0 0; color:#475569; font-size:14px;"><b>📍 Venue / Location:</b> {venue_val}</p>'
+                    f'</div>'
+                    f'<div><span class="pill-event">🏷️ {unit_val}</span></div>'
+                    f'</div>'
+                    f'</div>'
+                )
+                st.markdown(card_event_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # VIEW 3: MONTHLY HISTORICAL REVIEW

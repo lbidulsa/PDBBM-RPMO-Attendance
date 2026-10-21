@@ -7,10 +7,10 @@ import requests
 import streamlit as st
 
 # ---------------------------------------------------------
-# PAGE CONFIGURATION & EXECUTIVE LIGHT UI WITH BUBBLE EFFECTS
+# PAGE CONFIGURATION & EXECUTIVE LIGHT/NEON UI HYBRID
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="PDBBM-RPMO Executive Attendance Portal",
+    page_title="PDBBM-RPMO Attendance & Activity Calendar Portal",
     page_icon="📋",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -21,12 +21,12 @@ st.markdown(
     <style>
     .stApp { background: #F1F5F9; color: #0F172A; font-family: 'Inter', system-ui, sans-serif; }
     .glow-header-title {
-        font-size: 38px !important; font-weight: 900 !important;
+        font-size: 36px !important; font-weight: 900 !important;
         background: linear-gradient(90deg, #1E3A8A, #0284C7, #E11D48);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         text-align: center; margin-bottom: 2px;
     }
-    .glow-header-sub { color: #64748B; font-size: 16px; font-weight: 600; text-align: center; margin-bottom: 25px; }
+    .glow-header-sub { color: #64748B; font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 20px; }
     
     /* Metric Cards Bubble Hover Effect */
     div[data-testid="stMetric"] {
@@ -36,8 +36,8 @@ st.markdown(
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important; cursor: pointer !important;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-5px) scale(1.02) !important; border-color: #E11D48 !important;
-        box-shadow: 0 0 18px rgba(225, 29, 72, 0.5), 0 0 28px rgba(225, 29, 72, 0.25) !important;
+        transform: translateY(-5px) scale(1.02) !important; border-color: #0284C7 !important;
+        box-shadow: 0 0 18px rgba(2, 132, 199, 0.4), 0 0 28px rgba(2, 132, 199, 0.2) !important;
     }
     div[data-testid="stMetric"] label {
         color: #475569 !important; font-size: 12px !important; font-weight: 800 !important; text-transform: uppercase;
@@ -52,8 +52,8 @@ st.markdown(
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
     }
     div.stButton > button:hover, div.stFormSubmitButton > button:hover, .stSidebar div.stButton > button:hover {
-        background-color: #FFFFFF !important; color: #E11D48 !important; border-color: #E11D48 !important;
-        box-shadow: 0 0 15px rgba(225, 29, 72, 0.6), 0 0 25px rgba(225, 29, 72, 0.3) !important;
+        background-color: #FFFFFF !important; color: #0284C7 !important; border-color: #0284C7 !important;
+        box-shadow: 0 0 15px rgba(2, 132, 199, 0.6), 0 0 25px rgba(2, 132, 199, 0.3) !important;
         transform: translateY(-2px) scale(1.01) !important;
     }
 
@@ -78,7 +78,17 @@ st.markdown(
         box-shadow: 0 0 18px rgba(225, 29, 72, 0.4) !important; border-left-width: 8px !important;
     }
 
-    /* Interactive Name Glow Bubble Style */
+    /* Event Calendar Custom Card */
+    .event-card {
+        background: #FFFFFF; border: 1px solid #CBD5E1; border-left: 6px solid #8B5CF6;
+        border-radius: 14px; padding: 18px 22px; margin-bottom: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: all 0.25s ease-in-out;
+    }
+    .event-card:hover {
+        transform: translateY(-3px) scale(1.005); border-color: #8B5CF6;
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.35); border-left-width: 8px;
+    }
+
     .staff-name-bubble {
         color: #0F172A; font-size: 18px; font-weight: 800; display: inline-block;
         transition: all 0.2s ease-in-out; padding: 2px 6px; border-radius: 6px;
@@ -96,6 +106,7 @@ st.markdown(
     .pill-onsite { background-color: #DCFCE7; color: #15803D; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BBF7D0; font-size: 13px; }
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
+    .pill-event { background-color: #F3E8FF; color: #6B21A8; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #E9D5FF; font-size: 13px; }
 
     section[data-testid="stSidebar"] { 
         background: linear-gradient(180deg, #E2E8F0 0%, #F1F5F9 100%) !important; 
@@ -112,13 +123,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ATTENDANCE SHEET API & PUBLISHED CONFIG
 SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
+GOOGLE_API_KEY = "AIzaSyDiW6mBtJbwykz-5Inr2ampnMVG3NXRmOY"
 
-# DYNAMIC SAFE SECRET INJECTION (PREVENTS PUBLIC GITHUB LEAKS)
-GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
+# CALENDAR PUBLISHED GOOGLE SHEET CSV CONVERSION URL
+CALENDAR_PUBHTML_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNK5QrMaSQ-0wZL8KocE99P9V1m8gB1Lxv6e53nEgS5qrStwnh_qeODyJWJhAHcw/pubhtml"
+CALENDAR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNK5QrMaSQ-0wZL8KocE99P9V1m8gB1Lxv6e53nEgS5qrStwnh_qeODyJWJhAHcw/pub?output=csv"
 
 def normalize_string(s):
     return re.sub(r"[^a-zA-Z0-9]", "", str(s)).lower()
+
+@st.cache_data(ttl=15)
+def fetch_activity_calendar_data():
+    """Fetch and parse live Activity Calendar Data"""
+    try:
+        df = pd.read_csv(CALENDAR_CSV_URL)
+        df.columns = [str(c).strip() for c in df.columns]
+        df = df.dropna(how='all')
+        return df
+    except Exception:
+        return pd.DataFrame()
 
 @st.cache_data(ttl=0)
 def fetch_live_matrix_data():
@@ -140,7 +165,7 @@ def fetch_live_matrix_data():
                             parsed_row = []
                             for c in r.get("values", []):
                                 val = str(c.get("formattedValue", "") or c.get("userEnteredValue", {}).get("stringValue", ""))
-                                note = str(c.get("note", ""))  # DIRECT EXTRACTION OF CELL HOVER NOTES
+                                note = str(c.get("note", ""))
                                 parsed_row.append({"val": val, "note": note})
                             parsed_matrix.append(parsed_row)
                         return parsed_matrix
@@ -207,17 +232,22 @@ st.sidebar.markdown('<div class="sidebar-logo-card">', unsafe_allow_html=True)
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 
-st.sidebar.markdown("<h3 style='margin-top:10px; margin-bottom:2px; color:#0F172A;'>📋 PDBBM-RPMO PORTAL</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='margin-top:10px; margin-bottom:2px; color:#0F172A;'>📋 PDBBM PORTAL</h3>", unsafe_allow_html=True)
 st.sidebar.markdown("<span style='color:#0284C7; font-size:12px; font-weight:800;'>DSWD FIELD OFFICE X</span>", unsafe_allow_html=True)
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
 st.sidebar.title("🎛️ Navigation Portal")
 
-view_mode = st.sidebar.radio("Select View Mode:", ["📍 Today's Live Attendance", "🗓️ Monthly Historical Review"])
+view_mode = st.sidebar.radio(
+    "Select System View:", 
+    ["📍 Today's Attendance", "📅 Activity Calendar", "🗓️ Monthly Historical Attendance"]
+)
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-if st.sidebar.button("🔄 REFRESH DATA NOW", use_container_width=True):
+if st.sidebar.button("🔄 REFRESH ALL DATA", use_container_width=True):
+    st.cache_data.clear()
+    st.toast("⚡ Refreshed Attendance & Calendar Data!", icon="🔄")
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -229,7 +259,7 @@ st.sidebar.markdown(
     <div style="text-align: center; font-size: 0.8em; color: #475569;">
         💻 <b>System Developer & Architect</b><br>
         Developed by <br><b style="color:#0284C7;">LOUIE B. IDULSA - PDBBM ITO I</b><br>
-        <i>DSWD FO X - PDBBM Attendance Portal © 2026</i>
+        <i>DSWD FO X - PDBBM Integrated Portal © 2026</i>
     </div>
     """,
     unsafe_allow_html=True,
@@ -238,13 +268,13 @@ st.sidebar.markdown(
 # ---------------------------------------------------------
 # HEADER SECTION
 # ---------------------------------------------------------
-st.markdown('<div class="glow-header-title">📋 PDBBM-RPMO STAFF DAILY LOGS TRACKER</div>', unsafe_allow_html=True)
-st.markdown('<div class="glow-header-sub">DSWD Field Office X • Executive Decision Support Portal</div>', unsafe_allow_html=True)
+st.markdown('<div class="glow-header-title">📋 PDBBM-RPMO INTEGRATED MANAGEMENT PORTAL</div>', unsafe_allow_html=True)
+st.markdown('<div class="glow-header-sub">DSWD Field Office X • Attendance & Activity Calendar Hub</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # VIEW 1: TODAY'S LIVE ATTENDANCE LOGS
 # ---------------------------------------------------------
-if view_mode == "📍 Today's Live Attendance":
+if view_mode == "📍 Today's Attendance":
     now_dt = datetime.now()
     today_str = now_dt.strftime("%B %d, %Y (%A)")
     day_num = str(now_dt.day)
@@ -402,7 +432,69 @@ if view_mode == "📍 Today's Live Attendance":
         st.markdown(card_html, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# VIEW 2: MONTHLY HISTORICAL REVIEW
+# VIEW 2: INTERACTIVE PDBBM ACTIVITY CALENDAR
+# ---------------------------------------------------------
+elif view_mode == "📅 Activity Calendar":
+    st.markdown("### 📅 PDBBM Integrated Activity Calendar & Event Schedule")
+    
+    df_cal = fetch_activity_calendar_data()
+
+    if not df_cal.empty:
+        # Top Metrics for Activities
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("📋 TOTAL ACTIVITIES", f"{len(df_cal)} Scheduled")
+        col_m2.metric("📅 CALENDAR SOURCE", "Live Google Sheets")
+        col_m3.metric("⚡ AUTO SYNC", "Active (Realtime)")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        search_cal = st.text_input("🔍 Search Activities (by Event Name, Venue, Lead Unit, or Date):", "")
+        
+        if search_cal:
+            mask = df_cal.astype(str).apply(lambda row: row.str.contains(search_cal, case=False).any(), axis=1)
+            df_cal_display = df_cal[mask]
+        else:
+            df_cal_display = df_cal
+
+        st.markdown(f"#### 🎯 Scheduled Events ({len(df_cal_display)})")
+
+        # Tab Views for Activity Display
+        tab_cards, tab_matrix = st.tabs(["🎴 Interactive Event Cards", "📊 Full Sheet Matrix View"])
+
+        with tab_cards:
+            if df_cal_display.empty:
+                st.info("Walang nahanap na activity batay sa iyong hinahanap.")
+            else:
+                for idx, row in df_cal_display.iterrows():
+                    cols_list = list(df_cal_display.columns)
+                    title_val = str(row[cols_list[0]]).strip() if len(cols_list) > 0 else "Activity Event"
+                    date_val = str(row[cols_list[1]]).strip() if len(cols_list) > 1 else "TBA"
+                    venue_val = str(row[cols_list[2]]).strip() if len(cols_list) > 2 else "TBA"
+                    unit_val = str(row[cols_list[3]]).strip() if len(cols_list) > 3 else "PDBBM RPMO"
+
+                    card_event_html = (
+                        f'<div class="event-card">'
+                        f'<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">'
+                        f'<div style="flex: 1; min-width: 280px;">'
+                        f'<h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">📅 {title_val}</h3>'
+                        f'<p style="margin:6px 0 2px 0; color:#475569; font-size:14px;"><b>📆 Date / Schedule:</b> {date_val}</p>'
+                        f'<p style="margin:2px 0 0 0; color:#475569; font-size:14px;"><b>📍 Venue / Location:</b> {venue_val}</p>'
+                        f'</div>'
+                        f'<div><span class="pill-event">🏷️ {unit_val}</span></div>'
+                        f'</div>'
+                        f'</div>'
+                    )
+                    st.markdown(card_event_html, unsafe_allow_html=True)
+
+        with tab_matrix:
+            st.dataframe(df_cal_display, use_container_width=True)
+
+    else:
+        st.markdown("#### 🌐 Live Sheet Interactive Calendar View")
+        st.components.v1.iframe(CALENDAR_PUBHTML_URL, height=650, scrolling=True)
+
+# ---------------------------------------------------------
+# VIEW 3: MONTHLY HISTORICAL REVIEW
 # ---------------------------------------------------------
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
@@ -414,7 +506,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #64748B; padding-bottom: 20px;">
-        ⚙️ <b>PDBBM Executive Decision Support Portal</b> | Realtime Live Engine<br>
+        ⚙️ <b>PDBBM Executive Integrated System Portal</b> | Realtime Live Engine<br>
         Designed & Developed by <b>LOUIE B. IDULSA - PDBBM ITO I</b> • DSWD Field Office X
     </div>
     """,

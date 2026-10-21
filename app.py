@@ -21,29 +21,29 @@ st.markdown(
     <style>
     .stApp { background: #F1F5F9; color: #0F172A; font-family: 'Inter', system-ui, sans-serif; }
     .glow-header-title {
-        font-size: 36px !important; font-weight: 900 !important;
+        font-size: 34px !important; font-weight: 900 !important;
         background: linear-gradient(90deg, #1E3A8A, #0284C7, #E11D48);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         text-align: center; margin-bottom: 2px;
     }
-    .glow-header-sub { color: #64748B; font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 20px; }
+    .glow-header-sub { color: #64748B; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 20px; }
     
-    /* Metric Cards Hover Effect */
+    /* Adjusted Metric Cards Font Size */
     div[data-testid="stMetric"] {
         background: #FFFFFF !important; border: 1px solid #CBD5E1 !important;
-        border-radius: 16px !important; padding: 16px !important;
+        border-radius: 14px !important; padding: 12px 16px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important; cursor: pointer !important;
     }
     div[data-testid="stMetric"]:hover {
-        transform: translateY(-5px) scale(1.02) !important; border-color: #0284C7 !important;
-        box-shadow: 0 0 18px rgba(2, 132, 199, 0.4), 0 0 28px rgba(2, 132, 199, 0.2) !important;
+        transform: translateY(-4px) scale(1.01) !important; border-color: #0284C7 !important;
+        box-shadow: 0 0 15px rgba(2, 132, 199, 0.3) !important;
     }
     div[data-testid="stMetric"] label {
-        color: #475569 !important; font-size: 12px !important; font-weight: 800 !important; text-transform: uppercase;
+        color: #475569 !important; font-size: 11px !important; font-weight: 800 !important; text-transform: uppercase;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #0F172A !important; font-weight: 900 !important; font-size: 26px !important;
+        color: #0F172A !important; font-weight: 800 !important; font-size: 18px !important;
     }
 
     div.stButton > button, div.stFormSubmitButton > button, .stSidebar div.stButton > button {
@@ -59,62 +59,50 @@ st.markdown(
 
     /* Today Staff Cards Hover */
     .today-card {
-        background: #FFFFFF; padding: 18px 22px; border-radius: 14px;
-        border-left: 6px solid #0284C7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 12px;
+        background: #FFFFFF; padding: 16px 20px; border-radius: 12px;
+        border-left: 5px solid #0284C7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important;
     }
     .today-card:hover {
-        transform: translateY(-3px) scale(1.008) !important;
-        box-shadow: 0 0 18px rgba(2, 132, 199, 0.35) !important; border-left-width: 8px !important;
+        transform: translateY(-3px) scale(1.005) !important;
+        box-shadow: 0 0 15px rgba(2, 132, 199, 0.3) !important; border-left-width: 7px !important;
     }
     
     .today-card-absent {
-        background: #FFF1F2; padding: 18px 22px; border-radius: 14px;
-        border-left: 6px solid #E11D48; box-shadow: 0 4px 12px rgba(225,29,72,0.05); margin-bottom: 12px;
+        background: #FFF1F2; padding: 16px 20px; border-radius: 12px;
+        border-left: 5px solid #E11D48; box-shadow: 0 4px 12px rgba(225,29,72,0.05); margin-bottom: 12px;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important;
     }
     .today-card-absent:hover {
-        transform: translateY(-3px) scale(1.008) !important;
-        box-shadow: 0 0 18px rgba(225, 29, 72, 0.4) !important; border-left-width: 8px !important;
-    }
-
-    /* Event Calendar Cards */
-    .event-card {
-        background: #FFFFFF; border: 1px solid #CBD5E1; border-left: 6px solid #8B5CF6;
-        border-radius: 14px; padding: 18px 22px; margin-bottom: 14px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03); transition: all 0.25s ease-in-out;
-    }
-    .event-card:hover {
-        transform: translateY(-3px) scale(1.005); border-color: #8B5CF6;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.35); border-left-width: 8px;
+        transform: translateY(-3px) scale(1.005) !important;
+        box-shadow: 0 0 15px rgba(225, 29, 72, 0.35) !important; border-left-width: 7px !important;
     }
 
     .calendar-container {
         background: #FFFFFF;
-        border-radius: 16px;
-        padding: 12px;
-        border: 2px solid #E2E8F0;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        border-radius: 14px;
+        padding: 10px;
+        border: 1px solid #CBD5E1;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.04);
     }
 
     .staff-name-bubble {
-        color: #0F172A; font-size: 18px; font-weight: 800; display: inline-block;
+        color: #0F172A; font-size: 16px; font-weight: 800; display: inline-block;
         transition: all 0.2s ease-in-out; padding: 2px 6px; border-radius: 6px;
     }
     .staff-name-bubble:hover {
-        color: #0284C7; background: #E0F2FE; transform: scale(1.03);
+        color: #0284C7; background: #E0F2FE; transform: scale(1.02);
     }
 
     .note-purpose-box {
         background: #F0F9FF; border: 1px solid #BAE6FD; border-left: 4px solid #0284C7;
-        border-radius: 8px; padding: 12px 16px; margin-top: 10px; font-size: 13px;
-        color: #0369A1; line-height: 1.5; word-wrap: break-word;
+        border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 12px;
+        color: #0369A1; line-height: 1.4; word-wrap: break-word;
     }
 
-    .pill-onsite { background-color: #DCFCE7; color: #15803D; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #BBF7D0; font-size: 13px; }
-    .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 13px; }
-    .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 13px; }
-    .pill-event { background-color: #F3E8FF; color: #6B21A8; font-weight: 800; padding: 6px 16px; border-radius: 20px; border: 1px solid #E9D5FF; font-size: 13px; }
+    .pill-onsite { background-color: #DCFCE7; color: #15803D; font-weight: 800; padding: 5px 14px; border-radius: 20px; border: 1px solid #BBF7D0; font-size: 12px; }
+    .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 5px 14px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 12px; }
+    .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 5px 14px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 12px; }
 
     section[data-testid="stSidebar"] { 
         background: linear-gradient(180deg, #E2E8F0 0%, #F1F5F9 100%) !important; 
@@ -124,7 +112,7 @@ st.markdown(
 
     .sidebar-logo-card {
         background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px;
-        padding: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        padding: 14px; text-align: center; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
     </style>
 """,
@@ -228,8 +216,8 @@ st.sidebar.markdown('<div class="sidebar-logo-card">', unsafe_allow_html=True)
 if os.path.exists("logo.png"):
     st.sidebar.image("logo.png", use_container_width=True)
 
-st.sidebar.markdown("<h3 style='margin-top:10px; margin-bottom:2px; color:#0F172A;'>📋 PDBBM PORTAL</h3>", unsafe_allow_html=True)
-st.sidebar.markdown("<span style='color:#0284C7; font-size:12px; font-weight:800;'>DSWD FIELD OFFICE X</span>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='margin-top:8px; margin-bottom:2px; color:#0F172A;'>📋 PDBBM PORTAL</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<span style='color:#0284C7; font-size:11px; font-weight:800;'>DSWD FIELD OFFICE X</span>", unsafe_allow_html=True)
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
 st.sidebar.title("🎛️ Navigation Portal")
@@ -414,11 +402,11 @@ if view_mode == "📍 Today's Attendance":
             f'<div class="{card_class}">'
             f'<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">'
             f'<div style="flex: 1; min-width: 280px;">'
-            f'<h3 style="margin:0; font-size:18px; font-weight:800;">'
+            f'<h3 style="margin:0; font-size:16px; font-weight:800;">'
             f'<span class="staff-name-bubble">👤 {name_str}</span> '
-            f'<span style="font-size:13px; color:#64748B; font-weight:600;">({pos_str})</span>'
+            f'<span style="font-size:12px; color:#64748B; font-weight:600;">({pos_str})</span>'
             f'</h3>'
-            f'<p style="margin:6px 0 0 0; color:#475569; font-size:14px;"><b>Current Status / Remarks:</b> {remarks_str}</p>'
+            f'<p style="margin:4px 0 0 0; color:#475569; font-size:13px;"><b>Current Status / Remarks:</b> {remarks_str}</p>'
             f'{note_box}'
             f'</div>'
             f'<div><span class="{pill_class}">{status_str}</span></div>'
@@ -432,12 +420,12 @@ if view_mode == "📍 Today's Attendance":
 # ---------------------------------------------------------
 elif view_mode == "📅 Activity Calendar":
     st.markdown("### 📅 PDBBM Executive Activity Calendar 2026")
-    st.caption("Live Interactive Sync gikan sa Google Sheets Visual Calendar")
+    st.caption("Live Interactive Sync from Google Sheets Visual Calendar")
 
-    # Metrics Summary Bar
+    # Metrics Summary Bar in English
     col_m1, col_m2, col_m3 = st.columns(3)
     col_m1.metric("📆 CURRENT CALENDAR VIEW", "October - December 2026")
-    col_m2.metric("📍 PROGRAM/UNIT", "PDBBM RPMO Region X")
+    col_m2.metric("📍 PROGRAM / UNIT", "PDBBM RPMO Region X")
     col_m3.metric("⚡ LIVE SYNC", "Google Sheets Active")
 
     st.markdown("<br>", unsafe_allow_html=True)

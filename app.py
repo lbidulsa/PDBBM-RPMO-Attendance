@@ -20,6 +20,13 @@ st.markdown(
     """
     <style>
     .stApp { background: #F1F5F9; color: #0F172A; font-family: 'Inter', system-ui, sans-serif; }
+
+    /* Security Fix: Hide Streamlit Header, GitHub Link Icon, Main Menu, and Footer */
+    header[data-testid="stHeader"] { visibility: hidden !important; display: none !important; }
+    #MainMenu { visibility: hidden !important; display: none !important; }
+    footer { visibility: hidden !important; display: none !important; }
+    .stAppDeployButton { display: none !important; }
+
     .glow-header-title {
         font-size: 34px !important; font-weight: 900 !important;
         background: linear-gradient(90deg, #1E3A8A, #0284C7, #E11D48);
@@ -120,11 +127,11 @@ st.markdown(
 )
 
 # ATTENDANCE SHEET API & PUBLISHED CONFIG
-SPREADSHEET_ID = "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ"
-GOOGLE_API_KEY = "AIzaSyDiW6mBtJbwykz-5Inr2ampnMVG3NXRmOY"
+SPREADSHEET_ID = st.secrets.get("SPREADSHEET_ID", "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ")
+GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "AIzaSyDiW6mBtJbwykz-5Inr2ampnMVG3NXRmOY")
 
 # CALENDAR PUBLISHED GOOGLE SHEET LINK
-CALENDAR_EMBED_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNK5QrMaSQ-0wZL8KocE99P9V1m8gB1Lxv6e53nEgS5qrStwnh_qeODyJWJhAHcw/pubhtml?widget=true&headers=false"
+CALENDAR_EMBED_URL = st.secrets.get("CALENDAR_EMBED_URL", "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNK5QrMaSQ-0wZL8KocE99P9V1m8gB1Lxv6e53nEgS5qrStwnh_qeODyJWJhAHcw/pubhtml?widget=true&headers=false")
 
 def normalize_string(s):
     return re.sub(r"[^a-zA-Z0-9]", "", str(s)).lower()
@@ -440,7 +447,7 @@ elif view_mode == "📅 Activity Calendar":
 # ---------------------------------------------------------
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
-    gsheet_iframe_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&headers=false"
+    gsheet_iframe_url = st.secrets.get("GVIZ_IFRAME_URL", "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&headers=false")
     st.components.v1.iframe(gsheet_iframe_url, height=680, scrolling=True)
 
 # FOOTER BADGE

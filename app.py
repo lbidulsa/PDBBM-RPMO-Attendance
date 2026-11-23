@@ -21,11 +21,22 @@ st.markdown(
     <style>
     .stApp { background: #F1F5F9; color: #0F172A; font-family: 'Inter', system-ui, sans-serif; }
 
-    /* Security Fix: Hide Streamlit Header, GitHub Link Icon, Main Menu, and Footer */
-    header[data-testid="stHeader"] { visibility: hidden !important; display: none !important; }
-    #MainMenu { visibility: hidden !important; display: none !important; }
-    footer { visibility: hidden !important; display: none !important; }
+    /* Security Fix: Hide GitHub Link Icon, Main Menu, Deploy Button, and Footer ONLY */
+    header[data-testid="stHeader"] { background: transparent !important; }
+    #MainMenu { visibility: hidden !important; }
+    footer { visibility: hidden !important; }
     .stAppDeployButton { display: none !important; }
+    [data-testid="stToolbarActions"] { display: none !important; }
+
+    /* Keep Sidebar Expand/Collapse Toggle Visible & Styled */
+    [data-testid="stSidebarCollapsedControl"] {
+        visibility: visible !important;
+        display: flex !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+    }
 
     .glow-header-title {
         font-size: 34px !important; font-weight: 900 !important;

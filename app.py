@@ -16,22 +16,126 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ATTENDANCE SHEET API & PUBLISHED CONFIG
+SPREADSHEET_ID = st.secrets.get("SPREADSHEET_ID", "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ")
+GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "AIzaSyDiW6mBtJbwykz-5Inr2ampnMVG3NXRmOY")
+
+# CALENDAR PUBLISHED GOOGLE SHEET LINK
+CALENDAR_EMBED_URL = st.secrets.get(
+    "CALENDAR_EMBED_URL",
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNK5QrMaSQ-0wZL8KocE99P9V1m8gB1Lxv6e53nEgS5qrStwnh_qeODyJWJhAHcw/pubhtml?widget=true&headers=false"
+)
+
+def normalize_string(s):
+    return re.sub(r"[^a-zA-Z0-9]", "", str(s)).lower()
+
+@st.cache_data(ttl=15, max_entries=5)
+def fetch_gviz_fallback():
+    current_sheet_name = requests.utils.quote(datetime.now().strftime("%B %Y").upper())
+    GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet={current_sheet_name}"
+    try:
+        ts = int(datetime.now().timestamp())
+        res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=6)
+        if res.status_code == 200:
+            match = re.search(r"google\.visualization\.Query\.setResponse\((.*)\);", res.text)
+            if match:
+                data = json.loads(match.group(1))
+                rows = data["table"]["rows"]
+                parsed_table = []
+                for row in rows:
+                    row_cells = []
+                    for cell in row.get("c", []):
+                        val = str(cell.get("v", "") or cell.get("f", "")) if cell else ""
+                        row_cells.append({"val": val, "note": ""})
+                    parsed_table.append(row_cells)
+                return parsed_table
+    except Exception:
+        pass
+    return []
+
+@st.cache_data(ttl=15, max_entries=5)
+def fetch_live_matrix_data():
+    """Fetch cell values AND hover cell notes directly using Google Sheets API v4"""
+    current_month_upper = datetime.now().strftime("%B").upper()
+    if GOOGLE_API_KEY:
+        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?includeGridData=true&key={GOOGLE_API_KEY}"
+        try:
+            res = requests.get(url, timeout=8)
+            if res.status_code == 200:
+                data = res.json()
+                sheets = data.get("sheets", [])
+                for sheet in sheets:
+                    title = sheet.get("properties", {}).get("title", "").upper()
+                    if current_month_upper in title:
+                        grid = sheet.get("data", [])[0]
+                        row_data = grid.get("rowData", [])
+                        parsed_matrix = []
+                        for r in row_data:
+                            parsed_row = []
+                            for c in r.get("values", []):
+                                val = str(c.get("formattedValue", "") or c.get("userEnteredValue", {}).get("stringValue", ""))
+                                note = str(c.get("note", ""))
+                                parsed_row.append({"val": val, "note": note})
+                            parsed_matrix.append(parsed_row)
+                        return parsed_matrix
+        except Exception:
+            pass
+
+    return fetch_gviz_fallback()
+
+def refresh_all_portal_data():
+    st.cache_data.clear()
+    st.toast("⚡ Refreshed Attendance & Calendar Data!", icon="🔄")
+
 st.markdown(
     """
     <style>
-    .stApp { background: #F1F5F9; color: #0F172A; font-family: 'Inter', system-ui, sans-serif; }
+    html, body, [class*="css"] {
+        font-family: 'Inter', system-ui, sans-serif;
+    }
 
-    /* Security Fix: Hide GitHub Link Icon, Main Menu, Deploy Button, and Footer ONLY */
-    header[data-testid="stHeader"] { background: transparent !important; }
-    #MainMenu { visibility: hidden !important; }
-    footer { visibility: hidden !important; }
-    .stAppDeployButton { display: none !important; }
-    [data-testid="stToolbarActions"] { display: none !important; }
+    /* Keep Streamlit Header & Toolbar visible for Sidebar Toggle (<< / >) and 3-Dots Theme Menu (⋮) */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
 
-    /* Keep Sidebar Expand/Collapse Toggle Visible & Styled */
-    [data-testid="stSidebarCollapsedControl"] {
+    /* Hide Deploy Button, Manage App Button, Toolbar Actions, Footer, Cloud Badge & Status Embed */
+    .stAppDeployButton,
+    button[data-testid="manage-app-button"],
+    [data-testid="manage-app-button"],
+    [data-testid="stToolbarActions"],
+    [data-testid="stActionButtonIcon"],
+    footer,
+    [data-testid="stStatusWidget"],
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK,
+    div[class^="viewerBadge_"],
+    div[class^="_profileContainer_"],
+    div[class^="_terminalButton_"],
+    div[class*="_terminalButton_"],
+    iframe[title="Streamlit Cloud Status"],
+    script[src*="streamlitstatus.com"],
+    a[href*="streamlit.io/cloud"] {
+        visibility: hidden !important;
+        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Keep Sidebar Collapse/Expand Button (<< / >) and 3-Dots MainMenu Visible & Styled */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    #MainMenu {
         visibility: visible !important;
         display: flex !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
         background-color: #FFFFFF !important;
         border: 1px solid #CBD5E1 !important;
         border-radius: 8px !important;
@@ -45,29 +149,29 @@ st.markdown(
         text-align: center; margin-bottom: 2px;
     }
     .glow-header-sub { color: #64748B; font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 20px; }
-    
+
     /* Adjusted Metric Cards Font Size */
     div[data-testid="stMetric"] {
-        background: #FFFFFF !important; border: 1px solid #CBD5E1 !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 14px !important; padding: 12px 16px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important; cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important; cursor: pointer !important;
     }
     div[data-testid="stMetric"]:hover {
         transform: translateY(-4px) scale(1.01) !important; border-color: #0284C7 !important;
         box-shadow: 0 0 15px rgba(2, 132, 199, 0.3) !important;
     }
     div[data-testid="stMetric"] label {
-        color: #475569 !important; font-size: 11px !important; font-weight: 800 !important; text-transform: uppercase;
+        font-size: 11px !important; font-weight: 800 !important; text-transform: uppercase;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #0F172A !important; font-weight: 800 !important; font-size: 18px !important;
+        font-weight: 800 !important; font-size: 18px !important;
     }
 
     div.stButton > button, div.stFormSubmitButton > button, .stSidebar div.stButton > button {
         background-color: #E2E8F0 !important; color: #0F172A !important; font-weight: bold !important;
         border-radius: 10px !important; border: 1px solid #CBD5E1 !important; padding: 10px 20px !important;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
     }
     div.stButton > button:hover, div.stFormSubmitButton > button:hover, .stSidebar div.stButton > button:hover {
         background-color: #FFFFFF !important; color: #0284C7 !important; border-color: #0284C7 !important;
@@ -77,19 +181,19 @@ st.markdown(
 
     /* Today Staff Cards Hover */
     .today-card {
-        background: #FFFFFF; padding: 16px 20px; border-radius: 12px;
+        background: #FFFFFF; padding: 16px 20px; border-radius: 12px; color: #0F172A;
         border-left: 5px solid #0284C7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 12px;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important;
     }
     .today-card:hover {
         transform: translateY(-3px) scale(1.005) !important;
         box-shadow: 0 0 15px rgba(2, 132, 199, 0.3) !important; border-left-width: 7px !important;
     }
-    
+
     .today-card-absent {
-        background: #FFF1F2; padding: 16px 20px; border-radius: 12px;
+        background: #FFF1F2; padding: 16px 20px; border-radius: 12px; color: #0F172A;
         border-left: 5px solid #E11D48; box-shadow: 0 4px 12px rgba(225,29,72,0.05); margin-bottom: 12px;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important;
     }
     .today-card-absent:hover {
         transform: translateY(-3px) scale(1.005) !important;
@@ -122,83 +226,18 @@ st.markdown(
     .pill-travel { background-color: #FEF3C7; color: #B45309; font-weight: 800; padding: 5px 14px; border-radius: 20px; border: 1px solid #FDE68A; font-size: 12px; }
     .pill-absent { background-color: #FFE4E6; color: #BE123C; font-weight: 800; padding: 5px 14px; border-radius: 20px; border: 1px solid #FECDD3; font-size: 12px; }
 
-    section[data-testid="stSidebar"] { 
-        background: linear-gradient(180deg, #E2E8F0 0%, #F1F5F9 100%) !important; 
+    section[data-testid="stSidebar"] {
         border-right: 1px solid #CBD5E1 !important;
     }
-    section[data-testid="stSidebar"] * { color: #0F172A !important; }
 
     .sidebar-logo-card {
         background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 12px;
         padding: 14px; text-align: center; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
     </style>
-""",
+    """,
     unsafe_allow_html=True,
 )
-
-# ATTENDANCE SHEET API & PUBLISHED CONFIG
-SPREADSHEET_ID = st.secrets.get("SPREADSHEET_ID", "10meIVpLZZV62chi0C4B7i_CVHYkucEX6GkO1LG1AgKQ")
-GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "AIzaSyDiW6mBtJbwykz-5Inr2ampnMVG3NXRmOY")
-
-# CALENDAR PUBLISHED GOOGLE SHEET LINK
-CALENDAR_EMBED_URL = st.secrets.get("CALENDAR_EMBED_URL", "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNK5QrMaSQ-0wZL8KocE99P9V1m8gB1Lxv6e53nEgS5qrStwnh_qeODyJWJhAHcw/pubhtml?widget=true&headers=false")
-
-def normalize_string(s):
-    return re.sub(r"[^a-zA-Z0-9]", "", str(s)).lower()
-
-@st.cache_data(ttl=0)
-def fetch_live_matrix_data():
-    """Fetch cell values AND hover cell notes directly using Google Sheets API v4"""
-    current_month_upper = datetime.now().strftime("%B").upper()
-    if GOOGLE_API_KEY:
-        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?includeGridData=true&key={GOOGLE_API_KEY}"
-        try:
-            res = requests.get(url, timeout=10)
-            if res.status_code == 200:
-                data = res.json()
-                sheets = data.get("sheets", [])
-                for sheet in sheets:
-                    title = sheet.get("properties", {}).get("title", "").upper()
-                    if current_month_upper in title:
-                        grid = sheet.get("data", [])[0]
-                        row_data = grid.get("rowData", [])
-                        parsed_matrix = []
-                        for r in row_data:
-                            parsed_row = []
-                            for c in r.get("values", []):
-                                val = str(c.get("formattedValue", "") or c.get("userEnteredValue", {}).get("stringValue", ""))
-                                note = str(c.get("note", ""))
-                                parsed_row.append({"val": val, "note": note})
-                            parsed_matrix.append(parsed_row)
-                        return parsed_matrix
-        except Exception:
-            pass
-
-    return fetch_gviz_fallback()
-
-def fetch_gviz_fallback():
-    current_sheet_name = requests.utils.quote(datetime.now().strftime("%B %Y").upper())
-    GVIZ_JSON_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet={current_sheet_name}"
-    try:
-        ts = int(datetime.now().timestamp())
-        res = requests.get(f"{GVIZ_JSON_URL}&_nocache={ts}", timeout=8)
-        if res.status_code == 200:
-            match = re.search(r"google\.visualization\.Query\.setResponse\((.*)\);", res.text)
-            if match:
-                data = json.loads(match.group(1))
-                rows = data["table"]["rows"]
-                parsed_table = []
-                for row in rows:
-                    row_cells = []
-                    for cell in row.get("c", []):
-                        val = str(cell.get("v", "") or cell.get("f", "")) if cell else ""
-                        row_cells.append({"val": val, "note": ""})
-                    parsed_table.append(row_cells)
-                return parsed_table
-    except Exception:
-        pass
-    return []
 
 # Official 24 Staff Roster
 official_roster = [
@@ -243,16 +282,13 @@ st.sidebar.markdown("</div>", unsafe_allow_html=True)
 st.sidebar.title("🎛️ Navigation Portal")
 
 view_mode = st.sidebar.radio(
-    "Select System View:", 
+    "Select System View:",
     ["📍 Today's Attendance", "📅 Activity Calendar", "🗓️ Monthly Historical Attendance"]
 )
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-if st.sidebar.button("🔄 REFRESH ALL DATA", use_container_width=True):
-    st.cache_data.clear()
-    st.toast("⚡ Refreshed Attendance & Calendar Data!", icon="🔄")
-    st.rerun()
+st.sidebar.button("🔄 REFRESH ALL DATA", use_container_width=True, on_click=refresh_all_portal_data)
 
 st.sidebar.markdown("---")
 st.sidebar.success("🔴 **REALTIME LIVE SYNC:** Active")
@@ -460,7 +496,10 @@ elif view_mode == "📅 Activity Calendar":
 # ---------------------------------------------------------
 else:
     st.markdown("### 🗓️ Monthly Historical Attendance Logs (Realtime Google Sheets Matrix)")
-    gsheet_iframe_url = st.secrets.get("GVIZ_IFRAME_URL", "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&headers=false")
+    gsheet_iframe_url = st.secrets.get(
+        "GVIZ_IFRAME_URL",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vTA3I0_4sefOAI68IKKjSYlTdmxhGasSwHmaIUlcYRVFnvMzVlKbmYl45uAY8gg_FAeGFgc44T2_dhh/pubhtml?widget=true&headers=false"
+    )
     st.components.v1.iframe(gsheet_iframe_url, height=680, scrolling=True)
 
 # FOOTER BADGE
